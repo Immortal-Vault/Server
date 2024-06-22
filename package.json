@@ -1,0 +1,14 @@
+{
+  "name": "immortal-vault-server",
+  "productName": "immortal-vault-server",
+  "version": "1.0.0",
+  "description": "Immortal Vault Server",
+  "scripts": {},
+  "devDependencies": {},
+  "keywords": [],
+  "author": {
+    "name": "Yuri Ratkevich",
+    "email": "yuri.ratkevich85360@gmail.com"
+  },
+  "license": "MIT"
+}
