@@ -4,7 +4,9 @@
   "version": "1.0.0",
   "description": "Immortal Vault Server",
   "scripts": {
-    "dev": "ts-node src/index.ts"
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "build": "tsc"
   },
   "keywords": [],
   "author": {
