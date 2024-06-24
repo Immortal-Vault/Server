@@ -32,6 +32,10 @@ app.post('/signUp', async (req, res) => {
     res.status(200).send();
 })
 
+app.get('/', (req, res) => {
+    return res.send('Immortal Vault Server')
+})
+
 app.get('/ping', async (req, res) => {
     res.status(200).send('Pong!');
 })

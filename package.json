@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Immortal Vault Server",
   "scripts": {
-    "start": "node dist/index.js",
+    "start": "nodemon src/index.ts",
     "dev": "ts-node src/index.ts",
     "build": "tsc"
   },
@@ -23,6 +23,7 @@
     "@types/node": "^20.14.8",
     "prisma": "5.15.0",
     "ts-node": "10.9.2",
-    "typescript": "5.5.2"
+    "typescript": "5.5.2",
+    "nodemon": "^3.1.4"
   }
 }
