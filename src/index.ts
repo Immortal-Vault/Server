@@ -1,6 +1,7 @@
 ﻿import {PrismaClient} from '@prisma/client'
 import express from 'express'
 import {getLatestClientRelease} from "./getLatestClientRelease";
+import * as argon2 from 'argon2'
 
 const port = 3001;
 const prisma = new PrismaClient()
@@ -24,12 +25,14 @@ app.post('/signUp', async (req, res) => {
         return;
     }
 
+    const hashedPassword = await argon2.hash(password)
+
     try {
         await prisma.user.create({
             data: {
                 name,
                 email,
-                password
+                password: hashedPassword
             },
         })
     } catch (e) {
