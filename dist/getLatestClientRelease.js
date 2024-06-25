@@ -14,7 +14,11 @@ function getLatestClientRelease(repositoryOwner, repositoryName) {
     return __awaiter(this, void 0, void 0, function* () {
         const url = `https://api.github.com/repos/${repositoryOwner}/${repositoryName}/releases/latest`;
         try {
-            const response = yield fetch(url);
+            const response = yield fetch(url, {
+                headers: {
+                    'Authorization': `token ${process.env.GITHUB_TOKEN}`,
+                }
+            });
             if (!response.ok) {
                 console.error(`Network response was not ok: ${response.statusText}`);
             }
