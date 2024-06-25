@@ -1,5 +1,6 @@
 ﻿import {PrismaClient} from '@prisma/client'
 import express from 'express'
+import {getLatestClientRelease} from "./getLatestClientRelease";
 
 const port = 3001;
 const prisma = new PrismaClient()
@@ -36,6 +37,11 @@ app.post('/signUp', async (req, res) => {
     }
 
     res.status(200).send();
+})
+
+app.get('/client-version', async (req, res) => {
+    const version = await getLatestClientRelease('Immortal-Vault', 'Client');
+    return res.status(200).send({ version: version.replace('v', '') } );
 })
 
 app.get('/', (req, res) => {

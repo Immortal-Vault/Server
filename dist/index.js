@@ -14,6 +14,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const client_1 = require("@prisma/client");
 const express_1 = __importDefault(require("express"));
+const getLatestClientRelease_1 = require("./getLatestClientRelease");
 const port = 3001;
 const prisma = new client_1.PrismaClient();
 const app = (0, express_1.default)();
@@ -43,6 +44,10 @@ app.post('/signUp', (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         console.error(e);
     }
     res.status(200).send();
+}));
+app.get('/client-version', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const version = yield (0, getLatestClientRelease_1.getLatestClientRelease)('Immortal-Vault', 'Client');
+    return res.status(200).send({ version: version.replace('v', '') });
 }));
 app.get('/', (req, res) => {
     return res.send('Immortal Vault Server');
