@@ -16,8 +16,8 @@ function getLatestClientRelease(repositoryOwner, repositoryName) {
         try {
             const response = yield fetch(url, {
                 headers: {
-                    'Authorization': `token ${process.env.GITHUB_TOKEN}`,
-                }
+                    Authorization: `token ${process.env.GITHUB_TOKEN}`,
+                },
             });
             if (!response.ok) {
                 console.error(`Network response was not ok: ${response.statusText}`);

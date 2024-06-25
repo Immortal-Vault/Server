@@ -44,8 +44,8 @@ const prisma = new client_1.PrismaClient();
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
 app.use(function (req, res, next) {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
     next();
 });
 app.post('/signUp', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -61,7 +61,7 @@ app.post('/signUp', (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             data: {
                 name,
                 email,
-                password: hashedPassword
+                password: hashedPassword,
             },
         });
     }
@@ -76,7 +76,7 @@ app.get('/client-version', (req, res) => __awaiter(void 0, void 0, void 0, funct
     const version = yield (0, getLatestClientRelease_1.getLatestClientRelease)(repositoryOwner, repositoryName);
     return res.status(200).send({
         version: version.replace('v', ''),
-        downloadUrl: `https://github.com/${repositoryOwner}/${repositoryName}/releases/download/${version}/Immortal.Vault.Setup.exe`
+        downloadUrl: `https://github.com/${repositoryOwner}/${repositoryName}/releases/download/${version}/Immortal.Vault.Setup.exe`,
     });
 }));
 app.get('/', (req, res) => {
