@@ -46,8 +46,13 @@ app.post('/signUp', (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     res.status(200).send();
 }));
 app.get('/client-version', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const version = yield (0, getLatestClientRelease_1.getLatestClientRelease)('Immortal-Vault', 'Client');
-    return res.status(200).send({ version: version.replace('v', '') });
+    const repositoryOwner = 'Immortal-Vault';
+    const repositoryName = 'Client';
+    const version = yield (0, getLatestClientRelease_1.getLatestClientRelease)(repositoryOwner, repositoryName);
+    return res.status(200).send({
+        version: version.replace('v', ''),
+        downloadUrl: `https://github.com/${repositoryOwner}/${repositoryName}/releases/download/${version}/Immortal.Vault.Setup.exe`
+    });
 }));
 app.get('/', (req, res) => {
     return res.send('Immortal Vault Server');

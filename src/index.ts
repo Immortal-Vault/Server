@@ -40,8 +40,14 @@ app.post('/signUp', async (req, res) => {
 })
 
 app.get('/client-version', async (req, res) => {
-    const version = await getLatestClientRelease('Immortal-Vault', 'Client');
-    return res.status(200).send({ version: version.replace('v', '') } );
+    const repositoryOwner = 'Immortal-Vault';
+    const repositoryName = 'Client';
+
+    const version = await getLatestClientRelease(repositoryOwner, repositoryName);
+    return res.status(200).send({
+        version: version.replace('v', ''),
+        downloadUrl: `https://github.com/${repositoryOwner}/${repositoryName}/releases/download/${version}/Immortal.Vault.Setup.exe`
+    });
 })
 
 app.get('/', (req, res) => {
