@@ -2,6 +2,13 @@
 import express from 'express'
 import { getLatestClientRelease } from './getLatestClientRelease'
 import * as argon2 from 'argon2'
+import jwt from 'jsonwebtoken'
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-expect-error
+BigInt.prototype['toJSON'] = function () {
+  return this.toString()
+}
 
 const port = 3001
 const prisma = new PrismaClient()
@@ -40,6 +47,28 @@ app.post('/signUp', async (req, res) => {
   }
 
   res.status(200).send()
+})
+
+app.post('/signIn', async (req, res) => {
+  const { email, password } = req.body
+
+  const user = await prisma.user.findFirst({ where: { email } })
+
+  if (!user) {
+    res.status(404).send()
+    return
+  }
+
+  if (!(await argon2.verify(user.password, password))) {
+    res.status(409).send()
+    return
+  }
+
+  const token = jwt.sign({ id: user?.id, email: user?.email }, process.env.JWT_PRIVATE_KEY, {
+    expiresIn: '1h',
+  })
+
+  res.status(200).json({ token }).send()
 })
 
 app.get('/client-version', async (req, res) => {

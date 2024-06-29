@@ -39,6 +39,12 @@ const client_1 = require("@prisma/client");
 const express_1 = __importDefault(require("express"));
 const getLatestClientRelease_1 = require("./getLatestClientRelease");
 const argon2 = __importStar(require("argon2"));
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-expect-error
+BigInt.prototype['toJSON'] = function () {
+    return this.toString();
+};
 const port = 3001;
 const prisma = new client_1.PrismaClient();
 const app = (0, express_1.default)();
@@ -69,6 +75,22 @@ app.post('/signUp', (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         console.error(e);
     }
     res.status(200).send();
+}));
+app.post('/signIn', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { email, password } = req.body;
+    const user = yield prisma.user.findFirst({ where: { email } });
+    if (!user) {
+        res.status(404).send();
+        return;
+    }
+    if (!(yield argon2.verify(user.password, password))) {
+        res.status(409).send();
+        return;
+    }
+    const token = jsonwebtoken_1.default.sign({ id: user === null || user === void 0 ? void 0 : user.id, email: user === null || user === void 0 ? void 0 : user.email }, process.env.JWT_PRIVATE_KEY, {
+        expiresIn: '1h',
+    });
+    res.status(200).json({ token }).send();
 }));
 app.get('/client-version', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const repositoryOwner = 'Immortal-Vault';
