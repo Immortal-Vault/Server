@@ -7,6 +7,8 @@
   },
   "AllowedHosts": "*",
   "GITHUB_TOKEN": "",
-  "REPOSITORY_OWNER": "",
-  "REPOSITORY_NAME": ""
+  "REPOSITORY": {
+    "OWNER": "",
+    "NAME": ""
+  }
 }

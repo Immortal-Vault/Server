@@ -19,8 +19,8 @@ public class VersionController
     [HttpGet("downloadUrl")]
     public async Task<IActionResult> GetDownloadUrl()
     {
-        var repositoryOwner = this._configuration["REPOSITORY_OWNER"];
-        var repositoryName = this._configuration["REPOSITORY_NAME"];
+        var repositoryOwner = this._configuration["REPOSITORY:OWNER"];
+        var repositoryName = this._configuration["REPOSITORY:NAME"];
 
         if (repositoryOwner is null || repositoryName is null)
         {
