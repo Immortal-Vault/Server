@@ -1,6 +1,0 @@
-@ImmortalVault_Server_HostAddress = http://localhost:5111
-
-GET {{ImmortalVault_Server_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
