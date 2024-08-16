@@ -43,6 +43,17 @@ builder.Services.AddSingleton<IAuthService, AuthService>();
 var connection = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new Exception("Database connection string not found");
 builder.Services.AddDbContext<ApplicationContext>(options => options.UseNpgsql(connection));
 
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(corsPolicyBuilder =>
+    {
+        corsPolicyBuilder.WithOrigins("http://localhost:3000")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -52,10 +63,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseCors();
 app.UseHttpsRedirection();
-
 app.UseAuthorization();
-
 app.MapControllers();
-
 app.Run();

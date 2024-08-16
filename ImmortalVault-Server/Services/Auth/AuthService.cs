@@ -7,7 +7,7 @@ namespace ImmortalVault_Server.Services.Auth;
 
 public interface IAuthService
 {
-    JwtSecurityToken GenerateAccessToken(string username, string audience);
+    string GenerateAccessToken(string username, string audience);
 }
 
 public class AuthService : IAuthService
@@ -19,7 +19,7 @@ public class AuthService : IAuthService
         this._configuration = configuration;
     }
     
-    public JwtSecurityToken GenerateAccessToken(string username, string audience)
+    public string GenerateAccessToken(string username, string audience)
     {
         var claims = new List<Claim>
         {
@@ -38,6 +38,6 @@ public class AuthService : IAuthService
                 SecurityAlgorithms.HmacSha256)
         );
 
-        return token;
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }
