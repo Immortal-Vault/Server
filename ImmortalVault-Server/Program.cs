@@ -1,7 +1,9 @@
 using System.Text;
+using ImmortalVault_Server;
 using ImmortalVault_Server.Services.Auth;
 using ImmortalVault_Server.Services.Client;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -37,6 +39,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddSingleton<IClientService, ClientService>();
 builder.Services.AddSingleton<IAuthService, AuthService>();
+
+var connection = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new Exception("Database connection string not found");
+builder.Services.AddDbContext<ApplicationContext>(options => options.UseNpgsql(connection));
 
 var app = builder.Build();
 
