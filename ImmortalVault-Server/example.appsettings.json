@@ -1,0 +1,24 @@
+﻿{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*",
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost; Database=immortal-vault; Username=postgres; Password=password"
+  },
+  "GITHUB_TOKEN": "",
+  "REPOSITORY": {
+    "OWNER": "",
+    "NAME": ""
+  },
+  "JWT": {
+    "ISSUER": "",
+    "IMMORTAL_VAULT_CLIENT": {
+      "AUDIENCE": "",
+      "SECRET_KEY": ""
+    }
+  }
+}
