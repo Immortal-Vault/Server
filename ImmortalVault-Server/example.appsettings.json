@@ -10,5 +10,12 @@
   "REPOSITORY": {
     "OWNER": "",
     "NAME": ""
+  },
+  "JWT": {
+    "ISSUER": "",
+    "IMMORTAL_VAULT_CLIENT": {
+      "AUDIENCE": "",
+      "SECRET_KEY": ""
+    }
   }
 }
