@@ -3,6 +3,10 @@ WORKDIR /app
 
 EXPOSE 8080
 
+ENV ASPNETCORE_URLS=https://+:8080
+ENV ASPNETCORE_Kestrel__Certificates__Default__Path=/https/cert.crt
+ENV ASPNETCORE_Kestrel__Certificates__Default__KeyPath=/https/cert.key
+
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
