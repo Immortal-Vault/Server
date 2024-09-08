@@ -13,14 +13,11 @@ COPY . .
 WORKDIR "/src/."
 RUN dotnet build "ImmortalVault-Server.csproj" -c Release -o /app/build
 
-# Публикуем приложение в режиме Release
 FROM build AS publish
 RUN dotnet publish "ImmortalVault-Server.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-# Финальный образ
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 
-# Запускаем приложение
 ENTRYPOINT ["dotnet", "ImmortalVault-Server.dll"]
