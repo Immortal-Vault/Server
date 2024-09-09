@@ -15,18 +15,18 @@ public record SignInModel(string Email, string Password);
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
-    private readonly ApplicationContext _context;
+    private readonly ApplicationDbContext _dbContext;
 
-    public AuthController(IAuthService authService, ApplicationContext context)
+    public AuthController(IAuthService authService, ApplicationDbContext dbContext)
     {
         this._authService = authService;
-        this._context = context;
+        this._dbContext = dbContext;
     }
     
     [HttpPost("signUp")]
     public async Task<IActionResult> SignUp([FromBody] SignUpModel model)
     {
-        var sameUser = await this._context.Users
+        var sameUser = await this._dbContext.Users
             .Where(u => u.Email == model.Email || u.Name == model.Username)
             .FirstOrDefaultAsync();
         if (sameUser != null)
@@ -43,8 +43,8 @@ public class AuthController : ControllerBase
                 Password = Argon2.Hash(model.Password)
             };
             
-            this._context.Users.Add(user);
-            await this._context.SaveChangesAsync();
+            this._dbContext.Users.Add(user);
+            await this._dbContext.SaveChangesAsync();
 
             return Ok();
         }
@@ -58,7 +58,7 @@ public class AuthController : ControllerBase
     [HttpPost("signIn")]
     public async Task<IActionResult> SignIn([FromBody] SignInModel model)
     {
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.Email);
+        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == model.Email);
         if (user == null)
         {
             return NotFound();

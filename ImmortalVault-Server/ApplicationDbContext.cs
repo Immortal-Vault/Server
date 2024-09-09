@@ -3,11 +3,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ImmortalVault_Server;
 
-public sealed class ApplicationContext : DbContext
+public sealed class ApplicationDbContext : DbContext
 {
     public DbSet<User> Users { get; set; } = null!;
 
-    public ApplicationContext(DbContextOptions<ApplicationContext> options) : base(options)
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
     {
     }
 }
