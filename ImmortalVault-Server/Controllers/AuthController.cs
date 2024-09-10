@@ -58,8 +58,10 @@ public class AuthController : ControllerBase
     [HttpPost("signIn")]
     public async Task<IActionResult> SignIn([FromBody] SignInModel model)
     {
-        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == model.Email);
-        if (user == null)
+        var user = await _dbContext.Users
+            .Include(user => user.UserLocalization)
+            .FirstOrDefaultAsync(u => u.Email == model.Email);
+        if (user is null)
         {
             return NotFound();
         }
@@ -70,7 +72,8 @@ public class AuthController : ControllerBase
         }
 
         var token = this._authService.GenerateAccessToken(user.Name, Audience.ImmortalVaultClient);
+        var localization = user.UserLocalization?.Language;
 
-        return Ok(new { token });
+        return Ok(new { token, localization });
     }
 }

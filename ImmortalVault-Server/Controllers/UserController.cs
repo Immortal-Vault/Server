@@ -29,7 +29,7 @@ public class UserController : ControllerBase
         
         if (user is null)
         {
-            return StatusCode(404);
+            return NotFound();
         }
 
         try
