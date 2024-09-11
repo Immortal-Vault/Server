@@ -1,5 +1,6 @@
 using System.Text;
 using ImmortalVault_Server;
+using ImmortalVault_Server.Middlewares;
 using ImmortalVault_Server.Services.Auth;
 using ImmortalVault_Server.Services.Client;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -90,6 +91,7 @@ app.UseCookiePolicy(new CookiePolicyOptions()
     Secure = CookieSecurePolicy.Always
 });
 
+app.UseMiddleware<JwtRefreshMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

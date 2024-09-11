@@ -13,6 +13,8 @@ public interface IAuthService
 public class AuthService : IAuthService
 {
     private readonly IConfiguration _configuration;
+    public static readonly int TokenLifetimeMinutes = 10;
+    public static readonly int TokenRefreshThresholdInMinutes = 5;
 
     public AuthService(IConfiguration configuration)
     {
@@ -32,7 +34,7 @@ public class AuthService : IAuthService
             issuer: this._configuration["JWT:ISSUER"],
             audience: this._configuration[$"JWT:{audience}:AUDIENCE"],
             claims: claims,
-            expires: DateTime.UtcNow.AddHours(1),
+            expires: DateTime.UtcNow.AddMinutes(TokenLifetimeMinutes),
             signingCredentials: new SigningCredentials(
                 new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
                 SecurityAlgorithms.HmacSha256)
