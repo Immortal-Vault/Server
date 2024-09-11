@@ -78,7 +78,7 @@ public class AuthController : ControllerBase
             HttpOnly = true,
             Secure = true,
             SameSite = SameSiteMode.Strict,
-            Expires = DateTimeOffset.UtcNow.AddMinutes(1)
+            Expires = DateTimeOffset.UtcNow.AddMinutes(10)
         });
         
         var localization = user.UserLocalization?.Language;
