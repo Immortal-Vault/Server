@@ -1,6 +1,7 @@
 ﻿using ImmortalVault_Server.Models;
 using ImmortalVault_Server.Services.Auth;
 using Isopoh.Cryptography.Argon2;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -71,9 +72,19 @@ public class AuthController : ControllerBase
             return StatusCode(409);
         }
 
-        var token = this._authService.GenerateAccessToken(user.Name, Audience.ImmortalVaultClient);
+        var token = this._authService.GenerateAccessToken(user.Email, Audience.ImmortalVaultClient);
+        Response.Cookies.Append("jwtToken", token);
+        
         var localization = user.UserLocalization?.Language;
 
-        return Ok(new { token, localization });
+        return Ok(new { localization });
+    }
+    
+    [Authorize]
+    [HttpPost("signOut")]
+    public IActionResult SignOut()
+    {
+        Response.Cookies.Delete("jwtToken");
+        return LocalRedirect("/auth/signIn");
     }
 }

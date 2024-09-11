@@ -20,5 +20,8 @@
       "AUDIENCE": "",
       "SECRET_KEY": ""
     }
+  },
+  "CORS": {
+    "ORIGINS": [""]
   }
 }

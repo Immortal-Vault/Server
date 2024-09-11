@@ -7,7 +7,7 @@ namespace ImmortalVault_Server.Services.Auth;
 
 public interface IAuthService
 {
-    string GenerateAccessToken(string username, string audience);
+    string GenerateAccessToken(string email, string audience);
 }
 
 public class AuthService : IAuthService
@@ -19,11 +19,11 @@ public class AuthService : IAuthService
         this._configuration = configuration;
     }
     
-    public string GenerateAccessToken(string username, string audience)
+    public string GenerateAccessToken(string email, string audience)
     {
         var claims = new List<Claim>
         {
-            new(ClaimTypes.Name, username),
+            new(ClaimTypes.Email, email),
         };
 
         var secretKey = this._configuration[$"JWT:{audience}:SECRET_KEY"] ?? throw new Exception("Secret key not configured");

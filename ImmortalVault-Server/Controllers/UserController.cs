@@ -1,12 +1,12 @@
+using System.Security.Claims;
 using ImmortalVault_Server.Models;
-using ImmortalVault_Server.Services.Auth;
-using Isopoh.Cryptography.Argon2;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace ImmortalVault_Server.Controllers;
 
-public record ChangeLanguageModel(string Email, string Language);
+public record ChangeLanguageModel(string Language);
 
 [ApiController]
 [Route("api/user")]
@@ -19,12 +19,15 @@ public class UserController : ControllerBase
         this._dbContext = dbContext;
     }
     
+    [Authorize]
     [HttpPost("changeLanguage")]
     public async Task<IActionResult> ChangeLanguage([FromBody] ChangeLanguageModel model)
     {
+        var email = User.FindFirst(ClaimTypes.Email)!.Value;
+        
         var user = await this._dbContext.Users
             .Include(u => u.UserLocalization)
-            .Where(u => u.Email == model.Email)
+            .Where(u => u.Email == email)
             .FirstOrDefaultAsync();
         
         if (user is null)

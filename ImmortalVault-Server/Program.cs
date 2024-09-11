@@ -3,6 +3,7 @@ using ImmortalVault_Server;
 using ImmortalVault_Server.Services.Auth;
 using ImmortalVault_Server.Services.Client;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.CookiePolicy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -32,6 +33,15 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 configuration["JWT:IMMORTAL_VAULT_CLIENT:SECRET_KEY"] ??
                 throw new Exception("Secret key not configured")))
         };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                context.Token = context.Request.Cookies["jwtToken"];
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddSingleton<IClientService, ClientService>();
@@ -55,13 +65,32 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors(corsPolicyBuilder => 
+app.UseCors(corsPolicyBuilder =>
+{
     corsPolicyBuilder
-    .AllowAnyHeader()
-    .AllowAnyMethod()
-    .AllowAnyOrigin());
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials();
+
+    var allowedOrigin = configuration["CORS:ALLOWED_ORIGIN"];
+    if (allowedOrigin is null)
+    {
+        throw new Exception("Allowed origins not found");
+    }
+
+    corsPolicyBuilder.WithOrigins(allowedOrigin);
+});
 
 app.UseHttpsRedirection();
+
+app.UseCookiePolicy(new CookiePolicyOptions()
+{
+    MinimumSameSitePolicy = SameSiteMode.Strict,
+    HttpOnly = HttpOnlyPolicy.Always,
+    Secure = CookieSecurePolicy.Always
+});
+
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();
