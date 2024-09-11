@@ -91,6 +91,6 @@ public class AuthController : ControllerBase
     public IActionResult SignOut()
     {
         Response.Cookies.Delete("jwtToken");
-        return LocalRedirect("/auth/signIn");
+        return Ok();
     }
 }
