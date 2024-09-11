@@ -73,7 +73,13 @@ public class AuthController : ControllerBase
         }
 
         var token = this._authService.GenerateAccessToken(user.Email, Audience.ImmortalVaultClient);
-        Response.Cookies.Append("jwtToken", token);
+        Response.Cookies.Append("jwtToken", token, new CookieOptions()
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Expires = DateTimeOffset.UtcNow.AddMinutes(1)
+        });
         
         var localization = user.UserLocalization?.Language;
 
