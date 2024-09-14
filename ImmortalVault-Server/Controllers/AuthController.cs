@@ -73,7 +73,7 @@ public class AuthController : ControllerBase
         }
 
         var token = this._authService.GenerateAccessToken(user.Email, Audience.ImmortalVaultClient);
-        Response.Cookies.Append("jwtToken", token, new CookieOptions()
+        Response.Cookies.Append("immortalVaultJwtToken", token, new CookieOptions()
         {
             HttpOnly = true,
             Secure = true,
@@ -90,7 +90,7 @@ public class AuthController : ControllerBase
     [HttpPost("signOut")]
     public IActionResult SignOut()
     {
-        Response.Cookies.Delete("jwtToken");
+        Response.Cookies.Delete("immortalVaultJwtToken");
         return Ok();
     }
     

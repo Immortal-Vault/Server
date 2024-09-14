@@ -18,7 +18,7 @@ public class JwtRefreshMiddleware
 
     public async Task Invoke(HttpContext context)
     {
-        var token = context.Request.Cookies["jwtToken"];
+        var token = context.Request.Cookies["immortalVaultJwtToken"];
         if (!string.IsNullOrEmpty(token))
         {
             var tokenHandler = new JwtSecurityTokenHandler();
@@ -32,7 +32,7 @@ public class JwtRefreshMiddleware
                 {
                     var newToken = _authService.GenerateAccessToken(email, Audience.ImmortalVaultClient);
                     
-                    context.Response.Cookies.Append("jwtToken", newToken, new CookieOptions
+                    context.Response.Cookies.Append("immortalVaultJwtToken", newToken, new CookieOptions
                     {
                         HttpOnly = true,
                         Secure = true,
