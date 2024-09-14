@@ -93,4 +93,11 @@ public class AuthController : ControllerBase
         Response.Cookies.Delete("jwtToken");
         return Ok();
     }
+    
+    [Authorize]
+    [HttpGet("ping")]
+    public IActionResult Ping()
+    {
+        return Ok();
+    }
 }
