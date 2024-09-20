@@ -12,4 +12,5 @@ public class User
     [Required(ErrorMessage = "Password is required.")]
     public string Password { get; set; }
     public UserLocalization? UserLocalization { get; set; }
+    public UserTokens? UserTokens { get; set; }
 }
