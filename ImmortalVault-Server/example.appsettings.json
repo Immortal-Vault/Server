@@ -21,6 +21,14 @@
       "SECRET_KEY": ""
     }
   },
+  "GOOGLE": {
+    "CLIENT_ID": "",
+    "CLIENT_SECRET": ""
+  },
+  "AES": {
+    "SECRET_KEY": "",
+    "IV": ""
+  },
   "CORS": {
     "ORIGINS": [""]
   }
