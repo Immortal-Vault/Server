@@ -1,5 +1,4 @@
 ﻿using System.Security.Claims;
-using Azure.Core;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Auth.OAuth2.Flows;
 using ImmortalVault_Server.Models;
@@ -70,6 +69,7 @@ public class AuthController : ControllerBase
     {
         var user = await _dbContext.Users
             .Include(user => user.UserLocalization)
+            .Include(user => user.UserTokens)
             .FirstOrDefaultAsync(u => u.Email == model.Email);
         if (user is null)
         {
@@ -91,8 +91,9 @@ public class AuthController : ControllerBase
         });
 
         var localization = user.UserLocalization?.Language;
+        var googleDriveState = user.UserTokens is not null;
 
-        return Ok(new { localization });
+        return Ok(new { localization, googleDriveState });
     }
 
     [Authorize]
@@ -104,8 +105,8 @@ public class AuthController : ControllerBase
     }
 
     [Authorize]
-    [HttpPost("google")]
-    public async Task<IActionResult> ExchangeCodeForTokens([FromBody] GoogleAuthRequest request)
+    [HttpPost("signIn/google")]
+    public async Task<IActionResult> SignInGoogle([FromBody] GoogleAuthRequest request)
     {
         var user = await _dbContext.Users
             .Include(user => user.UserTokens)
@@ -135,7 +136,7 @@ public class AuthController : ControllerBase
 
             var aesSecretKey = this._configuration["AES:SECRET_KEY"]!;
             var aesIv = this._configuration["AES:IV"]!;
-            
+
             var encryptedAccessToken = AesEncryption.Encrypt(tokenResponse.AccessToken, aesSecretKey, aesIv);
             var encryptedRefreshToken = AesEncryption.Encrypt(tokenResponse.RefreshToken, aesSecretKey, aesIv);
 
@@ -158,6 +159,38 @@ public class AuthController : ControllerBase
                 this._dbContext.UsersTokens.Add(userTokens);
             }
 
+            this._dbContext.Users.Update(user);
+
+            await this._dbContext.SaveChangesAsync();
+
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [Authorize]
+    [HttpPost("signOut/google")]
+    public async Task<IActionResult> SignOutGoogle()
+    {
+        var user = await _dbContext.Users
+            .Include(user => user.UserTokens)
+            .FirstOrDefaultAsync(u => u.Email == User.FindFirst(ClaimTypes.Email)!.Value);
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        try
+        {
+            if (user.UserTokens is null)
+            {
+                return Ok();
+            }
+            
+            this._dbContext.UsersTokens.Remove(user.UserTokens);
             this._dbContext.Users.Update(user);
 
             await this._dbContext.SaveChangesAsync();
