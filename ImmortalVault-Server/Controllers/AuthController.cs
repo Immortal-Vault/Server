@@ -91,9 +91,8 @@ public class AuthController : ControllerBase
         });
 
         var localization = user.UserLocalization?.Language;
-        var googleDriveState = user.UserTokens is not null;
 
-        return Ok(new { localization, googleDriveState });
+        return Ok(new { localization });
     }
 
     [Authorize]
@@ -201,6 +200,21 @@ public class AuthController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
+    }
+    
+    [Authorize]
+    [HttpGet("google")]
+    public async Task<IActionResult> GetGoogleState()
+    {
+        var user = await _dbContext.Users
+            .Include(user => user.UserTokens)
+            .FirstOrDefaultAsync(u => u.Email == User.FindFirst(ClaimTypes.Email)!.Value);
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        return user.UserTokens is not null ? Ok() : NotFound();
     }
 
     [Authorize]
