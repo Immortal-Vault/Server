@@ -3,6 +3,7 @@ using ImmortalVault_Server;
 using ImmortalVault_Server.Middlewares;
 using ImmortalVault_Server.Services.Auth;
 using ImmortalVault_Server.Services.Client;
+using ImmortalVault_Server.Services.GoogleDrive;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.CookiePolicy;
 using Microsoft.EntityFrameworkCore;
@@ -47,6 +48,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddSingleton<IClientService, ClientService>();
 builder.Services.AddSingleton<IAuthService, AuthService>();
+builder.Services.AddSingleton<IGoogleDriveService, GoogleDriveService>();
 
 var connection = builder.Configuration.GetConnectionString("DefaultConnection") ??
                  throw new Exception("Database connection string not found");
@@ -84,7 +86,7 @@ app.UseCors(corsPolicyBuilder =>
 
 app.UseHttpsRedirection();
 
-app.UseCookiePolicy(new CookiePolicyOptions()
+app.UseCookiePolicy(new CookiePolicyOptions
 {
     MinimumSameSitePolicy = SameSiteMode.None,
     HttpOnly = HttpOnlyPolicy.Always,
