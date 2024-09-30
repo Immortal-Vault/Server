@@ -10,20 +10,20 @@ namespace ImmortalVault_Server.Services.GoogleDrive;
 
 public interface IGoogleDriveService
 {
-    Task UploadOrReplacePasswordFile(string accessToken, string content);
-    Task UploadPasswordFile(string accessToken, string content);
-    Task DeletePasswordFile(string accessToken, string content);
-    Task<(string Id, string Content)?> GetPasswordFile(string accessToken);
+    Task UploadOrReplaceSecretFile(string accessToken, string content);
+    Task UploadSecretFile(string accessToken, string content);
+    Task DeleteSecretFile(string accessToken, string content);
+    Task<(string Id, string Content)?> GetSecretFile(string accessToken);
     Task<FileList> GetAllFiles(string accessToken);
     DriveService GetGoogleDriveService(string accessToken);
-    Task<bool> DoesPasswordFileExists(string accessToken);
+    Task<bool> DoesSecretFileExists(string accessToken);
 }
 
 public class GoogleDriveService : IGoogleDriveService
 {
     private readonly string _aesSecretKey;
     private readonly string _aesIv;
-    private const string PasswordFileName = "immortal-vault.pass";
+    private const string SecretFileName = "immortal-vault.pass";
 
     public GoogleDriveService(IConfiguration configuration)
     {
@@ -31,23 +31,23 @@ public class GoogleDriveService : IGoogleDriveService
         this._aesIv = configuration["AES:IV"]!;
     }
     
-    public async Task UploadOrReplacePasswordFile(string accessToken, string content)
+    public async Task UploadOrReplaceSecretFile(string accessToken, string content)
     {
-        if (await this.DoesPasswordFileExists(accessToken))
+        if (await this.DoesSecretFileExists(accessToken))
         {
-            await this.DeletePasswordFile(accessToken, content);
+            await this.DeleteSecretFile(accessToken, content);
         }
 
-        await this.UploadPasswordFile(accessToken, content);
+        await this.UploadSecretFile(accessToken, content);
     }
 
-    public async Task UploadPasswordFile(string accessToken, string content)
+    public async Task UploadSecretFile(string accessToken, string content)
     {
         var service = this.GetGoogleDriveService(accessToken);
 
         var fileMetadata = new DriveFile
         {
-            Name = PasswordFileName,
+            Name = SecretFileName,
             Parents = new List<string> { "appDataFolder" }
         };
 
@@ -58,10 +58,10 @@ public class GoogleDriveService : IGoogleDriveService
         await uploadRequest.UploadAsync();
     }
     
-    public async Task DeletePasswordFile(string accessToken, string content)
+    public async Task DeleteSecretFile(string accessToken, string content)
     {
         var service = this.GetGoogleDriveService(accessToken);
-        var passwordFileInfo = await this.GetPasswordFile(accessToken);
+        var passwordFileInfo = await this.GetSecretFile(accessToken);
         if (passwordFileInfo is not {} info)
         {
             return;
@@ -71,12 +71,12 @@ public class GoogleDriveService : IGoogleDriveService
         await deleteFileRequest.ExecuteAsync();
     }
 
-    public async Task<(string Id, string Content)?> GetPasswordFile(string accessToken)
+    public async Task<(string Id, string Content)?> GetSecretFile(string accessToken)
     {
         var service = this.GetGoogleDriveService(accessToken);
         var fileList = await this.GetAllFiles(accessToken);
 
-        var fileId = fileList.Files.FirstOrDefault(f => f.Name == PasswordFileName)?.Id;
+        var fileId = fileList.Files.FirstOrDefault(f => f.Name == SecretFileName)?.Id;
         if (fileId == null)
         {
             return null;
@@ -112,11 +112,11 @@ public class GoogleDriveService : IGoogleDriveService
         });
     }
     
-    public async Task<bool> DoesPasswordFileExists(string accessToken)
+    public async Task<bool> DoesSecretFileExists(string accessToken)
     {
         var fileList = await this.GetAllFiles(accessToken);
 
-        var file = fileList.Files.FirstOrDefault(f => f.Name == PasswordFileName);
+        var file = fileList.Files.FirstOrDefault(f => f.Name == SecretFileName);
         return file != null;
     }
 }

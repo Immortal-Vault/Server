@@ -9,7 +9,7 @@ namespace ImmortalVault_Server.Controllers;
 public record GoogleDriveUploadRequest(string Content);
 
 [ApiController]
-[Route("api/googleDrive")]
+[Route("api/googleDrive/secretFile")]
 public class GoogleDriveController : ControllerBase
 {
     private readonly IGoogleDriveService _googleDriveService;
@@ -22,8 +22,8 @@ public class GoogleDriveController : ControllerBase
     }
     
     [Authorize]
-    [HttpPost("upload")]
-    public async Task<IActionResult> UploadFile([FromBody] GoogleDriveUploadRequest request)
+    [HttpPost]
+    public async Task<IActionResult> UploadSecretFile([FromBody] GoogleDriveUploadRequest request)
     {
         var user = await _dbContext.Users
             .Include(user => user.UserTokens)
@@ -33,13 +33,13 @@ public class GoogleDriveController : ControllerBase
             return NotFound();
         }
 
-        await this._googleDriveService.UploadOrReplacePasswordFile(user.UserTokens!.AccessToken, request.Content);
+        await this._googleDriveService.UploadOrReplaceSecretFile(user.UserTokens!.AccessToken, request.Content);
         
         return Ok();
     }
     
     [Authorize]
-    [HttpGet("getPasswordFile")]
+    [HttpGet]
     public async Task<IActionResult> GetPasswordFile()
     {
         var user = await _dbContext.Users
@@ -50,10 +50,10 @@ public class GoogleDriveController : ControllerBase
             return NotFound("Account not found");
         }
 
-        var fileContent = await this._googleDriveService.GetPasswordFile(user.UserTokens!.AccessToken);
+        var fileContent = await this._googleDriveService.GetSecretFile(user.UserTokens!.AccessToken);
         if (fileContent is null)
         {
-            return NotFound("Password file not found");
+            return NotFound("Secret file not found");
         }
         
         return Ok(fileContent.Value.Content);
