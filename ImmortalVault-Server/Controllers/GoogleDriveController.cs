@@ -33,7 +33,12 @@ public class GoogleDriveController : ControllerBase
             return NotFound();
         }
 
-        await this._googleDriveService.UploadOrReplaceSecretFile(user.UserTokens!.AccessToken, request.Content);
+        if (this._googleDriveService.IsTokenExpired(user))
+        {
+            await this._googleDriveService.UpdateTokens(user, this._dbContext);
+        }
+        
+        await this._googleDriveService.UploadOrReplaceSecretFile(user, request.Content);
         
         return Ok();
     }
@@ -50,7 +55,12 @@ public class GoogleDriveController : ControllerBase
             return NotFound("Account not found");
         }
 
-        var fileContent = await this._googleDriveService.GetSecretFile(user.UserTokens!.AccessToken);
+        if (this._googleDriveService.IsTokenExpired(user))
+        {
+            await this._googleDriveService.UpdateTokens(user, this._dbContext);
+        }
+
+        var fileContent = await this._googleDriveService.GetSecretFile(user);
         if (fileContent is null)
         {
             return NotFound("Secret file not found");

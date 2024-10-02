@@ -24,12 +24,18 @@ public class AuthController : ControllerBase
     private readonly IAuthService _authService;
     private readonly IConfiguration _configuration;
     private readonly ApplicationDbContext _dbContext;
+    
+    private readonly string _aesSecretKey;
+    private readonly string _aesIv;
 
     public AuthController(IAuthService authService, IConfiguration configuration, ApplicationDbContext dbContext)
     {
         this._authService = authService;
         this._configuration = configuration;
         this._dbContext = dbContext;
+        
+        this._aesSecretKey = configuration["AES:SECRET_KEY"]!;
+        this._aesIv = configuration["AES:IV"]!;
     }
 
     [HttpPost("signUp")]
@@ -133,25 +139,25 @@ public class AuthController : ControllerBase
                 CancellationToken.None
             );
 
-            var aesSecretKey = this._configuration["AES:SECRET_KEY"]!;
-            var aesIv = this._configuration["AES:IV"]!;
-
-            var encryptedAccessToken = AesEncryption.Encrypt(tokenResponse.AccessToken, aesSecretKey, aesIv);
-            var encryptedRefreshToken = AesEncryption.Encrypt(tokenResponse.RefreshToken, aesSecretKey, aesIv);
+            var encryptedAccessToken = AesEncryption.Encrypt(tokenResponse.AccessToken, this._aesSecretKey, this._aesIv);
+            var encryptedRefreshToken = AesEncryption.Encrypt(tokenResponse.RefreshToken, this._aesSecretKey, this._aesIv);
+            var tokenExpiryTime = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresInSeconds.GetValueOrDefault(3600));
 
             if (user.UserTokens is { })
             {
                 user.UserTokens.AccessToken = encryptedAccessToken;
                 user.UserTokens.RefreshToken = encryptedRefreshToken;
+                user.UserTokens.TokenExpiryTime = tokenExpiryTime;
 
                 this._dbContext.UsersTokens.Update(user.UserTokens);
             }
             else
             {
-                var userTokens = new UserTokens()
+                var userTokens = new UserTokens
                 {
                     AccessToken = encryptedAccessToken,
                     RefreshToken = encryptedRefreshToken,
+                    TokenExpiryTime = tokenExpiryTime,
                 };
 
                 user.UserTokens = userTokens;
