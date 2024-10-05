@@ -75,13 +75,13 @@ app.UseCors(corsPolicyBuilder =>
         .AllowAnyMethod()
         .AllowCredentials();
 
-    var allowedOrigin = configuration["CORS:ALLOWED_ORIGIN"];
-    if (allowedOrigin is null)
+    var allowedOrigins = configuration.GetSection("CORS:ALLOWED_ORIGINS").Get<string[]>();
+    if (allowedOrigins is null)
     {
         throw new Exception("Allowed origins not found");
     }
 
-    corsPolicyBuilder.WithOrigins(allowedOrigin);
+    corsPolicyBuilder.WithOrigins(allowedOrigins);
 });
 
 app.UseHttpsRedirection();

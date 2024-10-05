@@ -30,6 +30,6 @@
     "IV": ""
   },
   "CORS": {
-    "ORIGINS": [""]
+    "ALLOWED_ORIGINS": [""]
   }
 }
