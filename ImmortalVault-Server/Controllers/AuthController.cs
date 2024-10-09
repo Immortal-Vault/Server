@@ -238,6 +238,11 @@ public class AuthController : ControllerBase
             return NotFound();
         }
         
+        if (this._googleDriveService.IsTokenExpired(user))
+        {
+            await this._googleDriveService.UpdateTokens(user, this._dbContext);
+        }
+        
         var decryptedAccessToken = AesEncryption.Decrypt(user.UserTokens.AccessToken, this._aesSecretKey, this._aesIv);
         var credential = GoogleCredential.FromAccessToken(decryptedAccessToken);
 
