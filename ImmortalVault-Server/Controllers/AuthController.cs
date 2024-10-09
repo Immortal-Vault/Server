@@ -1,9 +1,12 @@
 ﻿using System.Security.Claims;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Auth.OAuth2.Flows;
+using Google.Apis.Oauth2.v2;
+using Google.Apis.Services;
 using ImmortalVault_Server.Models;
 using ImmortalVault_Server.Services.AES;
 using ImmortalVault_Server.Services.Auth;
+using ImmortalVault_Server.Services.GoogleDrive;
 using Isopoh.Cryptography.Argon2;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,6 +19,7 @@ public record SignUpModel(string Username, string Email, string Password);
 public record SignInModel(string Email, string Password);
 
 public record GoogleAuthRequest(string Code);
+public record GoogleSignOutRequest(bool KeepData);
 
 [ApiController]
 [Route("api/auth")]
@@ -23,15 +27,17 @@ public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
     private readonly IConfiguration _configuration;
+    private readonly IGoogleDriveService _googleDriveService;
     private readonly ApplicationDbContext _dbContext;
     
     private readonly string _aesSecretKey;
     private readonly string _aesIv;
 
-    public AuthController(IAuthService authService, IConfiguration configuration, ApplicationDbContext dbContext)
+    public AuthController(IAuthService authService, IConfiguration configuration, IGoogleDriveService googleDriveService, ApplicationDbContext dbContext)
     {
         this._authService = authService;
         this._configuration = configuration;
+        this._googleDriveService = googleDriveService;
         this._dbContext = dbContext;
         
         this._aesSecretKey = configuration["AES:SECRET_KEY"]!;
@@ -168,7 +174,9 @@ public class AuthController : ControllerBase
 
             await this._dbContext.SaveChangesAsync();
 
-            return Ok();
+            var hasSecretFile = await this._googleDriveService.GetSecretFile(user) != null;
+
+            return Ok(new { hasSecretFile });
         }
         catch (Exception ex)
         {
@@ -178,7 +186,7 @@ public class AuthController : ControllerBase
 
     [Authorize]
     [HttpPost("signOut/google")]
-    public async Task<IActionResult> SignOutGoogle()
+    public async Task<IActionResult> SignOutGoogle([FromBody] GoogleSignOutRequest request)
     {
         var user = await _dbContext.Users
             .Include(user => user.UserTokens)
@@ -193,6 +201,16 @@ public class AuthController : ControllerBase
             if (user.UserTokens is null)
             {
                 return Ok();
+            }
+
+            if (!request.KeepData)
+            {
+                if (this._googleDriveService.IsTokenExpired(user))
+                {
+                    await this._googleDriveService.UpdateTokens(user, this._dbContext);
+                }
+        
+                await this._googleDriveService.DeleteSecretFile(user);
             }
             
             this._dbContext.UsersTokens.Remove(user.UserTokens);
@@ -215,12 +233,23 @@ public class AuthController : ControllerBase
         var user = await _dbContext.Users
             .Include(user => user.UserTokens)
             .FirstOrDefaultAsync(u => u.Email == User.FindFirst(ClaimTypes.Email)!.Value);
-        if (user is null)
+        if (user?.UserTokens is null)
         {
             return NotFound();
         }
+        
+        var decryptedAccessToken = AesEncryption.Decrypt(user.UserTokens.AccessToken, this._aesSecretKey, this._aesIv);
+        var credential = GoogleCredential.FromAccessToken(decryptedAccessToken);
 
-        return user.UserTokens is not null ? Ok() : NotFound();
+        var userInfoService = new Oauth2Service(new BaseClientService.Initializer
+        {
+            HttpClientInitializer = credential
+        });
+        
+        var userInfo = await userInfoService.Userinfo.Get().ExecuteAsync();
+        var email = userInfo.Email;
+
+        return Ok(new { email });
     }
 
     [Authorize]
