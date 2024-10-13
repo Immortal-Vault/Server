@@ -175,8 +175,17 @@ public class AuthController : ControllerBase
             await this._dbContext.SaveChangesAsync();
 
             var hasSecretFile = await this._googleDriveService.GetSecretFile(user) != null;
-
-            return Ok(new { hasSecretFile });
+            
+            var credential = GoogleCredential.FromAccessToken(tokenResponse.AccessToken);
+            var userInfoService = new Oauth2Service(new BaseClientService.Initializer
+            {
+                HttpClientInitializer = credential
+            });
+        
+            var userInfo = await userInfoService.Userinfo.Get().ExecuteAsync();
+            var email = userInfo.Email;
+            
+            return Ok(new { hasSecretFile, email });
         }
         catch (Exception ex)
         {
