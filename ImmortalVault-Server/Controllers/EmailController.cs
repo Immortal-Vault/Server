@@ -56,6 +56,7 @@ public class EmailController : ControllerBase
         }
         catch (Exception ex)
         {
+            Console.Error.WriteLine(ex.Message);
             return StatusCode(500, new { Message = "Error sending email", Details = ex.Message });
         }
     }
