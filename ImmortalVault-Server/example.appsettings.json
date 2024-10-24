@@ -31,5 +31,10 @@
   },
   "CORS": {
     "ALLOWED_ORIGINS": [""]
+  },
+  "EMAIL": {
+    "USERNAME": "",
+    "PASSWORD": "",
+    "CONSUMER": ""
   }
 }
