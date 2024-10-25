@@ -52,7 +52,7 @@ builder.Services.AddSingleton<IGoogleDriveService, GoogleDriveService>();
 
 var connection = builder.Configuration.GetConnectionString("DefaultConnection") ??
                  throw new Exception("Database connection string not found");
-builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connection));
+builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connection), ServiceLifetime.Singleton);
 
 var app = builder.Build();
 
