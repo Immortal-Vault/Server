@@ -216,7 +216,7 @@ public class AuthController : ControllerBase
             {
                 if (this._googleDriveService.IsTokenExpired(user))
                 {
-                    await this._googleDriveService.UpdateTokens(user, this._dbContext);
+                    await this._googleDriveService.UpdateTokens(user);
                 }
         
                 await this._googleDriveService.DeleteSecretFile(user);
@@ -249,7 +249,7 @@ public class AuthController : ControllerBase
         
         if (this._googleDriveService.IsTokenExpired(user))
         {
-            await this._googleDriveService.UpdateTokens(user, this._dbContext);
+            await this._googleDriveService.UpdateTokens(user);
         }
         
         var decryptedAccessToken = AesEncryption.Decrypt(user.UserTokens.AccessToken, this._aesSecretKey, this._aesIv);

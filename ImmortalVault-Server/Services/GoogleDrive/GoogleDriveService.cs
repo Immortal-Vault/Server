@@ -20,20 +20,24 @@ public interface IGoogleDriveService
     Task<FileList> GetAllFiles(User user);
     DriveService? GetGoogleDriveService(User user);
     Task<bool> DoesSecretFileExists(User user);
-    Task<bool> UpdateTokens(User user, ApplicationDbContext dbContext);
+    Task<bool> UpdateTokens(User user);
     bool IsTokenExpired(User user);
 }
 
 public class GoogleDriveService : IGoogleDriveService
 {
     private readonly IConfiguration _configuration;
+    private readonly ApplicationDbContext _dbContext;
+    
     private readonly string _aesSecretKey;
     private readonly string _aesIv;
     private const string SecretFileName = "immortal-vault.pass";
 
-    public GoogleDriveService(IConfiguration configuration)
+    public GoogleDriveService(IConfiguration configuration, ApplicationDbContext dbContext)
     {
         this._configuration = configuration;
+        this._dbContext = dbContext;
+        
         this._aesSecretKey = configuration["AES:SECRET_KEY"]!;
         this._aesIv = configuration["AES:IV"]!;
     }
@@ -150,7 +154,7 @@ public class GoogleDriveService : IGoogleDriveService
         return file != null;
     }
 
-    public async Task<bool> UpdateTokens(User user, ApplicationDbContext dbContext)
+    public async Task<bool> UpdateTokens(User user)
     {
         if (user.UserTokens is not { } tokens)
         {
@@ -183,7 +187,7 @@ public class GoogleDriveService : IGoogleDriveService
             user.UserTokens.RefreshToken = encryptedRefreshToken;
             user.UserTokens.TokenExpiryTime = tokenExpiryTime;
 
-            dbContext.UsersTokens.Update(user.UserTokens);
+            this._dbContext.UsersTokens.Update(user.UserTokens);
         }
         else
         {
@@ -195,12 +199,12 @@ public class GoogleDriveService : IGoogleDriveService
             };
 
             user.UserTokens = userTokens;
-            dbContext.UsersTokens.Add(userTokens);
+            this._dbContext.UsersTokens.Add(userTokens);
         }
 
-        dbContext.Users.Update(user);
+        this._dbContext.Users.Update(user);
 
-        await dbContext.SaveChangesAsync();
+        await this._dbContext.SaveChangesAsync();
 
         return true;
     }

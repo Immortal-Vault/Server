@@ -2,7 +2,6 @@ using System.Text;
 using ImmortalVault_Server;
 using ImmortalVault_Server.Middlewares;
 using ImmortalVault_Server.Services.Auth;
-using ImmortalVault_Server.Services.Client;
 using ImmortalVault_Server.Services.GoogleDrive;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.CookiePolicy;
@@ -46,7 +45,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddSingleton<IClientService, ClientService>();
 builder.Services.AddSingleton<IAuthService, AuthService>();
 builder.Services.AddSingleton<IGoogleDriveService, GoogleDriveService>();
 

@@ -35,7 +35,7 @@ public class GoogleDriveController : ControllerBase
 
         if (this._googleDriveService.IsTokenExpired(user))
         {
-            await this._googleDriveService.UpdateTokens(user, this._dbContext);
+            await this._googleDriveService.UpdateTokens(user);
         }
         
         await this._googleDriveService.UploadOrReplaceSecretFile(user, request.Content);
@@ -57,7 +57,7 @@ public class GoogleDriveController : ControllerBase
 
         if (this._googleDriveService.IsTokenExpired(user))
         {
-            await this._googleDriveService.UpdateTokens(user, this._dbContext);
+            await this._googleDriveService.UpdateTokens(user);
         }
 
         var fileContent = await this._googleDriveService.GetSecretFile(user);
