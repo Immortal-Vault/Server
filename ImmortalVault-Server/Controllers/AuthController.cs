@@ -103,8 +103,9 @@ public class AuthController : ControllerBase
         });
 
         var localization = user.UserLocalization?.Language;
+        var username = user.Name;
 
-        return Ok(new { localization });
+        return Ok(new { localization, username });
     }
 
     [Authorize]
