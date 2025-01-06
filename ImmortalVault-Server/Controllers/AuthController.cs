@@ -48,7 +48,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> SignUp([FromBody] SignUpModel model)
     {
         var sameUser = await this._dbContext.Users
-            .Where(u => u.Email == model.Email || u.Name == model.Username)
+            .Where(u => u.Email.Equals(model.Email, StringComparison.InvariantCultureIgnoreCase) || u.Name.Equals(model.Username, StringComparison.InvariantCultureIgnoreCase))
             .FirstOrDefaultAsync();
         if (sameUser != null)
         {
