@@ -59,8 +59,8 @@ public class AuthController : ControllerBase
         {
             var user = new User
             {
-                Name = model.Username,
-                Email = model.Email,
+                Name = model.Username.ToLowerInvariant(),
+                Email = model.Email.ToLowerInvariant(),
                 Password = Argon2.Hash(model.Password)
             };
 
@@ -82,7 +82,7 @@ public class AuthController : ControllerBase
         var user = await _dbContext.Users
             .Include(user => user.UserLocalization)
             .Include(user => user.UserTokens)
-            .FirstOrDefaultAsync(u => u.Email == model.Email);
+            .FirstOrDefaultAsync(u => u.Email.Equals(model.Email, StringComparison.InvariantCultureIgnoreCase));
         if (user is null)
         {
             return NotFound();
