@@ -50,8 +50,8 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> SignUp([FromBody] SignUpModel model)
     {
         var sameUser = await this._dbContext.Users
-            .Where(u => u.Email.Equals(model.Email, StringComparison.InvariantCultureIgnoreCase) ||
-                        u.Name.Equals(model.Username, StringComparison.InvariantCultureIgnoreCase))
+            .Where(u => u.Email.ToLower() == model.Email.ToLower() ||
+                        u.Name.ToLower() == model.Username.ToLower())
             .FirstOrDefaultAsync();
         if (sameUser != null)
         {
@@ -62,8 +62,8 @@ public class AuthController : ControllerBase
         {
             var user = new User
             {
-                Name = model.Username.ToLowerInvariant(),
-                Email = model.Email.ToLowerInvariant(),
+                Name = model.Username.ToLower(),
+                Email = model.Email.ToLower(),
                 Password = Argon2.Hash(model.Password)
             };
 
@@ -86,8 +86,8 @@ public class AuthController : ControllerBase
             .Include(user => user.UserLocalization)
             .Include(user => user.UserTokens)
             .FirstOrDefaultAsync(u =>
-                u.Email.Equals(model.Email, StringComparison.InvariantCultureIgnoreCase) ||
-                u.Name.Equals(model.Email, StringComparison.InvariantCultureIgnoreCase));
+                u.Email.ToLower() == model.Email.ToLower() ||
+                u.Name.ToLower() == model.Email.ToLower());
         if (user is null)
         {
             return NotFound();
