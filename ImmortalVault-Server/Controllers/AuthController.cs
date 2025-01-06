@@ -19,6 +19,7 @@ public record SignUpModel(string Username, string Email, string Password);
 public record SignInModel(string Email, string Password);
 
 public record GoogleAuthRequest(string Code);
+
 public record GoogleSignOutRequest(bool KeepData);
 
 [ApiController]
@@ -29,17 +30,18 @@ public class AuthController : ControllerBase
     private readonly IConfiguration _configuration;
     private readonly IGoogleDriveService _googleDriveService;
     private readonly ApplicationDbContext _dbContext;
-    
+
     private readonly string _aesSecretKey;
     private readonly string _aesIv;
 
-    public AuthController(IAuthService authService, IConfiguration configuration, IGoogleDriveService googleDriveService, ApplicationDbContext dbContext)
+    public AuthController(IAuthService authService, IConfiguration configuration,
+        IGoogleDriveService googleDriveService, ApplicationDbContext dbContext)
     {
         this._authService = authService;
         this._configuration = configuration;
         this._googleDriveService = googleDriveService;
         this._dbContext = dbContext;
-        
+
         this._aesSecretKey = configuration["AES:SECRET_KEY"]!;
         this._aesIv = configuration["AES:IV"]!;
     }
@@ -48,7 +50,8 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> SignUp([FromBody] SignUpModel model)
     {
         var sameUser = await this._dbContext.Users
-            .Where(u => u.Email.Equals(model.Email, StringComparison.InvariantCultureIgnoreCase) || u.Name.Equals(model.Username, StringComparison.InvariantCultureIgnoreCase))
+            .Where(u => u.Email.Equals(model.Email, StringComparison.InvariantCultureIgnoreCase) ||
+                        u.Name.Equals(model.Username, StringComparison.InvariantCultureIgnoreCase))
             .FirstOrDefaultAsync();
         if (sameUser != null)
         {
@@ -82,7 +85,9 @@ public class AuthController : ControllerBase
         var user = await _dbContext.Users
             .Include(user => user.UserLocalization)
             .Include(user => user.UserTokens)
-            .FirstOrDefaultAsync(u => u.Email.Equals(model.Email, StringComparison.InvariantCultureIgnoreCase));
+            .FirstOrDefaultAsync(u =>
+                u.Email.Equals(model.Email, StringComparison.InvariantCultureIgnoreCase) ||
+                u.Name.Equals(model.Email, StringComparison.InvariantCultureIgnoreCase));
         if (user is null)
         {
             return NotFound();
@@ -146,8 +151,10 @@ public class AuthController : ControllerBase
                 CancellationToken.None
             );
 
-            var encryptedAccessToken = AesEncryption.Encrypt(tokenResponse.AccessToken, this._aesSecretKey, this._aesIv);
-            var encryptedRefreshToken = AesEncryption.Encrypt(tokenResponse.RefreshToken, this._aesSecretKey, this._aesIv);
+            var encryptedAccessToken =
+                AesEncryption.Encrypt(tokenResponse.AccessToken, this._aesSecretKey, this._aesIv);
+            var encryptedRefreshToken =
+                AesEncryption.Encrypt(tokenResponse.RefreshToken, this._aesSecretKey, this._aesIv);
             var tokenExpiryTime = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresInSeconds.GetValueOrDefault(3600));
 
             if (user.UserTokens is { })
@@ -176,16 +183,16 @@ public class AuthController : ControllerBase
             await this._dbContext.SaveChangesAsync();
 
             var hasSecretFile = await this._googleDriveService.GetSecretFile(user) != null;
-            
+
             var credential = GoogleCredential.FromAccessToken(tokenResponse.AccessToken);
             var userInfoService = new Oauth2Service(new BaseClientService.Initializer
             {
                 HttpClientInitializer = credential
             });
-        
+
             var userInfo = await userInfoService.Userinfo.Get().ExecuteAsync();
             var email = userInfo.Email;
-            
+
             return Ok(new { hasSecretFile, email });
         }
         catch (Exception ex)
@@ -219,10 +226,10 @@ public class AuthController : ControllerBase
                 {
                     await this._googleDriveService.UpdateTokens(user);
                 }
-        
+
                 await this._googleDriveService.DeleteSecretFile(user);
             }
-            
+
             this._dbContext.UsersTokens.Remove(user.UserTokens);
             this._dbContext.Users.Update(user);
 
@@ -235,7 +242,7 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = ex.Message });
         }
     }
-    
+
     [Authorize]
     [HttpGet("google")]
     public async Task<IActionResult> GetGoogleState()
@@ -247,12 +254,12 @@ public class AuthController : ControllerBase
         {
             return NotFound();
         }
-        
+
         if (this._googleDriveService.IsTokenExpired(user))
         {
             await this._googleDriveService.UpdateTokens(user);
         }
-        
+
         var decryptedAccessToken = AesEncryption.Decrypt(user.UserTokens.AccessToken, this._aesSecretKey, this._aesIv);
         var credential = GoogleCredential.FromAccessToken(decryptedAccessToken);
 
@@ -260,7 +267,7 @@ public class AuthController : ControllerBase
         {
             HttpClientInitializer = credential
         });
-        
+
         var userInfo = await userInfoService.Userinfo.Get().ExecuteAsync();
         var email = userInfo.Email;
 
