@@ -66,18 +66,21 @@ public class AuthController : ControllerBase
                 Email = model.Email.ToLower(),
                 Password = Argon2.Hash(model.Password)
             };
-
-            this._dbContext.Users.Add(user);
             
+            await this._dbContext.Users.AddAsync(user);
+            await this._dbContext.SaveChangesAsync();
+
             var settings = new UserSettings
             {
+                UserId = user.Id,
                 Language = model.Language,
                 Is12HoursFormat = model.Is12HoursFormat
             };
-
-            this._dbContext.UsersSettings.Add(settings);
+            
+            await this._dbContext.UsersSettings.AddAsync(settings);
             
             await this._dbContext.SaveChangesAsync();
+
 
             return Ok();
         }
@@ -117,9 +120,10 @@ public class AuthController : ControllerBase
         });
 
         var localization = user.UserSettings.Language;
+        var is12Hours = user.UserSettings.Is12HoursFormat;
         var username = user.Name;
 
-        return Ok(new { localization, username });
+        return Ok(new { localization, is12Hours, username });
     }
 
     [Authorize]
@@ -184,7 +188,7 @@ public class AuthController : ControllerBase
                 };
 
                 user.UserTokens = userTokens;
-                this._dbContext.UsersTokens.Add(userTokens);
+                await this._dbContext.UsersTokens.AddAsync(userTokens);
             }
 
             this._dbContext.Users.Update(user);
