@@ -6,7 +6,7 @@ namespace ImmortalVault_Server;
 public sealed class ApplicationDbContext : DbContext
 {
     public DbSet<User> Users { get; set; } = null!;
-    public DbSet<UserLocalization> UsersLocalizations { get; set; } = null!;
+    public DbSet<UserSettings> UsersSettings { get; set; } = null!;
     public DbSet<UserTokens> UsersTokens { get; set; } = null!;
 
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
@@ -16,9 +16,9 @@ public sealed class ApplicationDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<User>()
-            .HasOne(e => e.UserLocalization)
+            .HasOne(e => e.UserSettings)
             .WithOne(e => e.User)
-            .HasForeignKey<UserLocalization>(e => e.UserId);
+            .HasForeignKey<UserSettings>(e => e.UserId);
         
         modelBuilder.Entity<User>()
             .HasOne(e => e.UserTokens)
