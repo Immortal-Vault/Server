@@ -199,7 +199,7 @@ public class GoogleDriveService : IGoogleDriveService
             };
 
             user.UserTokens = userTokens;
-            this._dbContext.UsersTokens.Add(userTokens);
+            await this._dbContext.UsersTokens.AddAsync(userTokens);
         }
 
         this._dbContext.Users.Update(user);

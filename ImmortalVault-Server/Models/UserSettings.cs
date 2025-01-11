@@ -1,9 +1,10 @@
 namespace ImmortalVault_Server.Models;
 
-public class UserLocalization
+public class UserSettings
 {
     public int Id { get; set; }
     public string Language { get; set; }
+    public bool Is12HoursFormat { get; set; }
     public int UserId { get; set; }
     public User User { get; set; }
 }

@@ -11,6 +11,6 @@ public class User
     public string Email { get; set; }
     [Required(ErrorMessage = "Password is required.")]
     public string Password { get; set; }
-    public UserLocalization? UserLocalization { get; set; }
+    public UserSettings UserSettings { get; set; }
     public UserTokens? UserTokens { get; set; }
 }
