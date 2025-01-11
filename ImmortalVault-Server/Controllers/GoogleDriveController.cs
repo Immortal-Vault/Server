@@ -25,12 +25,12 @@ public class GoogleDriveController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> UploadSecretFile([FromBody] GoogleDriveUploadRequest request)
     {
-        var user = await _dbContext.Users
+        var user = await this._dbContext.Users
             .Include(user => user.UserTokens)
-            .FirstOrDefaultAsync(u => u.Email == User.FindFirst(ClaimTypes.Email)!.Value);
+            .FirstOrDefaultAsync(u => u.Email == this.User.FindFirst(ClaimTypes.Email)!.Value);
         if (user is null)
         {
-            return NotFound();
+            return this.NotFound();
         }
 
         if (this._googleDriveService.IsTokenExpired(user))
@@ -40,19 +40,19 @@ public class GoogleDriveController : ControllerBase
         
         await this._googleDriveService.UploadOrReplaceSecretFile(user, request.Content);
         
-        return Ok();
+        return this.Ok();
     }
     
     [Authorize]
     [HttpGet]
     public async Task<IActionResult> GetPasswordFile()
     {
-        var user = await _dbContext.Users
+        var user = await this._dbContext.Users
             .Include(user => user.UserTokens)
-            .FirstOrDefaultAsync(u => u.Email == User.FindFirst(ClaimTypes.Email)!.Value);
+            .FirstOrDefaultAsync(u => u.Email == this.User.FindFirst(ClaimTypes.Email)!.Value);
         if (user is null)
         {
-            return NotFound("Account not found");
+            return this.NotFound("Account not found");
         }
 
         if (this._googleDriveService.IsTokenExpired(user))
@@ -63,9 +63,9 @@ public class GoogleDriveController : ControllerBase
         var fileContent = await this._googleDriveService.GetSecretFile(user);
         if (fileContent is null)
         {
-            return NotFound("Secret file not found");
+            return this.NotFound("Secret file not found");
         }
         
-        return Ok(fileContent.Value.Content);
+        return this.Ok(fileContent.Value.Content);
     }
 }

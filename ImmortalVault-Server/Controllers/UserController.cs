@@ -23,7 +23,7 @@ public class UserController : ControllerBase
     [HttpPost("changeLanguage")]
     public async Task<IActionResult> ChangeLanguage([FromBody] ChangeLanguageModel model)
     {
-        var email = User.FindFirst(ClaimTypes.Email)!.Value;
+        var email = this.User.FindFirst(ClaimTypes.Email)!.Value;
 
         var user = await this._dbContext.Users
             .Include(u => u.UserSettings)
@@ -32,7 +32,7 @@ public class UserController : ControllerBase
 
         if (user is null)
         {
-            return NotFound();
+            return this.NotFound();
         }
 
         try
@@ -42,12 +42,12 @@ public class UserController : ControllerBase
 
             await this._dbContext.SaveChangesAsync();
 
-            return Ok();
+            return this.Ok();
         }
         catch (Exception e)
         {
             Console.Error.WriteLine(e);
-            return StatusCode(500, "An error occurred while updating the user's language.");
+            return this.StatusCode(500, "An error occurred while updating the user's language.");
         }
     }
     
@@ -55,7 +55,7 @@ public class UserController : ControllerBase
     [HttpPost("changeTimeFormat")]
     public async Task<IActionResult> ChangeTimeFormat([FromBody] ChangeTimeFormatModel model)
     {
-        var email = User.FindFirst(ClaimTypes.Email)!.Value;
+        var email = this.User.FindFirst(ClaimTypes.Email)!.Value;
 
         var user = await this._dbContext.Users
             .Include(u => u.UserSettings)
@@ -64,7 +64,7 @@ public class UserController : ControllerBase
 
         if (user is null)
         {
-            return NotFound();
+            return this.NotFound();
         }
 
         try
@@ -74,12 +74,12 @@ public class UserController : ControllerBase
 
             await this._dbContext.SaveChangesAsync();
 
-            return Ok();
+            return this.Ok();
         }
         catch (Exception e)
         {
             Console.Error.WriteLine(e);
-            return StatusCode(500, "An error occurred while updating the user's language.");
+            return this.StatusCode(500, "An error occurred while updating the user's language.");
         }
     }
 }
