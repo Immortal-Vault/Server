@@ -121,7 +121,7 @@ public class AuthController : ControllerBase
 
             if (!await this._mfaService.UseUserMfa(user, model.mfaCode))
             {
-                return BadRequest("mfaRequest");
+                return BadRequest("invalidMfa");
             }
         }
 
