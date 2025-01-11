@@ -10,6 +10,7 @@
     "DefaultConnection": "Host=localhost; Database=immortal-vault; Username=postgres; Password=password"
   },
   "GITHUB_TOKEN": "",
+  "EXPECTED_WEBSITE_VERSION": "v0.0.1",
   "REPOSITORY": {
     "OWNER": "",
     "NAME": ""
