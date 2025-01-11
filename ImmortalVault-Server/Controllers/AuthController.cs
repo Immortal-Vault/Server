@@ -16,7 +16,7 @@ namespace ImmortalVault_Server.Controllers;
 
 public record SignUpModel(string Username, string Email, string Password, string Language, bool Is12HoursFormat);
 
-public record SignInModel(string Email, string Password);
+public record SignInModel(string Email, string Password, string? mfaCode);
 
 public record GoogleAuthRequest(string Code);
 
@@ -29,18 +29,20 @@ public class AuthController : ControllerBase
     private readonly IAuthService _authService;
     private readonly IConfiguration _configuration;
     private readonly IGoogleDriveService _googleDriveService;
+    private readonly IMfaService _mfaService;
     private readonly ApplicationDbContext _dbContext;
 
     private readonly string _aesSecretKey;
     private readonly string _aesIv;
 
     public AuthController(IAuthService authService, IConfiguration configuration,
-        IGoogleDriveService googleDriveService, ApplicationDbContext dbContext)
+        IGoogleDriveService googleDriveService, ApplicationDbContext dbContext, IMfaService mfaService)
     {
         this._authService = authService;
         this._configuration = configuration;
         this._googleDriveService = googleDriveService;
         this._dbContext = dbContext;
+        _mfaService = mfaService;
 
         this._aesSecretKey = configuration["AES:SECRET_KEY"]!;
         this._aesIv = configuration["AES:IV"]!;
@@ -66,7 +68,7 @@ public class AuthController : ControllerBase
                 Email = model.Email.ToLower(),
                 Password = Argon2.Hash(model.Password)
             };
-            
+
             await this._dbContext.Users.AddAsync(user);
             await this._dbContext.SaveChangesAsync();
 
@@ -76,9 +78,9 @@ public class AuthController : ControllerBase
                 Language = model.Language,
                 Is12HoursFormat = model.Is12HoursFormat
             };
-            
+
             await this._dbContext.UsersSettings.AddAsync(settings);
-            
+
             await this._dbContext.SaveChangesAsync();
 
 
@@ -108,6 +110,19 @@ public class AuthController : ControllerBase
         if (!Argon2.Verify(user.Password, model.Password))
         {
             return StatusCode(409);
+        }
+
+        if (user.MfaEnabled)
+        {
+            if (model.mfaCode is null)
+            {
+                return BadRequest("mfa");
+            }
+
+            if (!await this._mfaService.UseUserMfa(user, model.mfaCode))
+            {
+                return BadRequest("mfaRequest");
+            }
         }
 
         var token = this._authService.GenerateAccessToken(user.Email, Audience.ImmortalVaultClient);

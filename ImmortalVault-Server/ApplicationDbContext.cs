@@ -12,17 +12,25 @@ public sealed class ApplicationDbContext : DbContext
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
     {
     }
-    
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<User>()
+        var builder = modelBuilder.Entity<User>();
+        builder
             .HasOne(e => e.UserSettings)
             .WithOne(e => e.User)
             .HasForeignKey<UserSettings>(e => e.UserId);
-        
-        modelBuilder.Entity<User>()
+
+        builder
             .HasOne(e => e.UserTokens)
             .WithOne(e => e.User)
             .HasForeignKey<UserTokens>(e => e.UserId);
+
+        builder.Property(e => e.MfaRecoveryCodes).HasColumnType("json").IsRequired(false);
+
+        builder.Ignore(e => e.MfaEnabled);
+
+        builder.Property(e => e.Password)
+            .IsRequired();
     }
 }

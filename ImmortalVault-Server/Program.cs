@@ -47,10 +47,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddSingleton<IAuthService, AuthService>();
 builder.Services.AddSingleton<IGoogleDriveService, GoogleDriveService>();
+builder.Services.AddSingleton<IMfaService, MfaService>();
 
 var connection = builder.Configuration.GetConnectionString("DefaultConnection") ??
                  throw new Exception("Database connection string not found");
-builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connection), ServiceLifetime.Singleton);
+builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connection),
+    ServiceLifetime.Singleton);
 
 var app = builder.Build();
 
