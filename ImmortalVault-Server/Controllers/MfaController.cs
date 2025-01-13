@@ -13,6 +13,12 @@ using Microsoft.AspNetCore.Mvc;
 [Authorize]
 public class MfaController : ControllerBase
 {
+    public record EnableMfaRequest(string TotpCode);
+
+    public record DisableMfaRequest(string Password, string TotpCode);
+
+    public record ValidateMfaRequest(string TotpCode);
+
     private readonly IMfaService _mfaService;
     private readonly ApplicationDbContext _dbContext;
 
@@ -34,7 +40,7 @@ public class MfaController : ControllerBase
         var mfa = this._mfaService.SetupMfa(user);
         if (mfa is null)
         {
-            return BadRequest("MFA already set up.");
+            return BadRequest("MFA_ALREADY_EXISTS");
         }
 
         return Ok(new { mfa });
@@ -53,7 +59,7 @@ public class MfaController : ControllerBase
         var codes = await this._mfaService.EnableMfa(user, request.TotpCode);
         if (codes is null)
         {
-            return BadRequest("Invalid TOTP code.");
+            return BadRequest("INVALID_TOTP");
         }
 
         return Ok(new { recoveryCodes = codes });
@@ -72,10 +78,10 @@ public class MfaController : ControllerBase
         var result = await this._mfaService.DisableMfa(user, request.Password, request.TotpCode);
         if (!result)
         {
-            return BadRequest("Invalid credentials or TOTP code.");
+            return BadRequest("INVALID_CREDENTIALS_OR_TOTP");
         }
 
-        return Ok("MFA disabled successfully.");
+        return Ok("MFA_DISABLED");
     }
 
     [HttpPost("validate")]
@@ -90,10 +96,10 @@ public class MfaController : ControllerBase
         var isValid = await this._mfaService.UseUserMfa(user, request.TotpCode);
         if (!isValid)
         {
-            return BadRequest("Invalid TOTP code.");
+            return BadRequest("INVALID_TOTP");
         }
 
-        return Ok("MFA validated successfully.");
+        return Ok();
     }
 
     private Task<User?> GetUser()
@@ -101,10 +107,4 @@ public class MfaController : ControllerBase
         return this._dbContext.Users
             .FirstOrDefaultAsync(u => u.Email == User.FindFirst(ClaimTypes.Email)!.Value);
     }
-
-    public record EnableMfaRequest(string TotpCode);
-
-    public record DisableMfaRequest(string Password, string TotpCode);
-
-    public record ValidateMfaRequest(string TotpCode);
 }

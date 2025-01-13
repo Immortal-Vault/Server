@@ -16,7 +16,7 @@ namespace ImmortalVault_Server.Controllers;
 
 public record SignUpModel(string Username, string Email, string Password, string Language, bool Is12HoursFormat);
 
-public record SignInModel(string Email, string Password, string? mfaCode);
+public record SignInModel(string Email, string Password, string? MfaCode);
 
 public record GoogleAuthRequest(string Code);
 
@@ -114,14 +114,14 @@ public class AuthController : ControllerBase
 
         if (user.MfaEnabled)
         {
-            if (model.mfaCode is null)
+            if (model.MfaCode is null)
             {
-                return BadRequest("mfa");
+                return BadRequest("MFA");
             }
 
-            if (!await this._mfaService.UseUserMfa(user, model.mfaCode))
+            if (!await this._mfaService.UseUserMfa(user, model.MfaCode))
             {
-                return BadRequest("invalidMfa");
+                return BadRequest("INVALID_MFA");
             }
         }
 
