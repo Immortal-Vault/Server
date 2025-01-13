@@ -18,20 +18,20 @@ public class MfaController : ControllerBase
 
     public MfaController(IMfaService mfaService, ApplicationDbContext dbContext)
     {
-        _mfaService = mfaService;
-        _dbContext = dbContext;
+        this._mfaService = mfaService;
+        this._dbContext = dbContext;
     }
 
     [HttpPost("setup")]
     public async Task<IActionResult> SetupMfa()
     {
-        var user = await GetUser();
+        var user = await this.GetUser();
         if (user is null)
         {
             return Forbid();
         }
 
-        var mfa = _mfaService.SetupMfa(user);
+        var mfa = this._mfaService.SetupMfa(user);
         if (mfa is null)
         {
             return BadRequest("MFA already set up.");
@@ -43,14 +43,14 @@ public class MfaController : ControllerBase
     [HttpPost("enable")]
     public async Task<IActionResult> EnableMfa([FromBody] EnableMfaRequest request)
     {
-        var user = await GetUser();
+        var user = await this.GetUser();
         if (user is null)
         {
             return Forbid();
         }
 
 
-        var codes = await _mfaService.EnableMfa(user, request.TotpCode);
+        var codes = await this._mfaService.EnableMfa(user, request.TotpCode);
         if (codes is null)
         {
             return BadRequest("Invalid TOTP code.");
@@ -62,14 +62,14 @@ public class MfaController : ControllerBase
     [HttpPost("disable")]
     public async Task<IActionResult> DisableMfa([FromBody] DisableMfaRequest request)
     {
-        var user = await GetUser();
+        var user = await this.GetUser();
         if (user is null)
         {
             return Forbid();
         }
 
 
-        var result = await _mfaService.DisableMfa(user, request.Password, request.TotpCode);
+        var result = await this._mfaService.DisableMfa(user, request.Password, request.TotpCode);
         if (!result)
         {
             return BadRequest("Invalid credentials or TOTP code.");
@@ -81,13 +81,13 @@ public class MfaController : ControllerBase
     [HttpPost("validate")]
     public async Task<IActionResult> ValidateMfa([FromBody] ValidateMfaRequest request)
     {
-        var user = await GetUser();
+        var user = await this.GetUser();
         if (user is null)
         {
             return Forbid();
         }
 
-        var isValid = await _mfaService.UseUserMfa(user, request.TotpCode);
+        var isValid = await this._mfaService.UseUserMfa(user, request.TotpCode);
         if (!isValid)
         {
             return BadRequest("Invalid TOTP code.");
@@ -98,7 +98,7 @@ public class MfaController : ControllerBase
 
     private Task<User?> GetUser()
     {
-        return _dbContext.Users
+        return this._dbContext.Users
             .FirstOrDefaultAsync(u => u.Email == User.FindFirst(ClaimTypes.Email)!.Value);
     }
 

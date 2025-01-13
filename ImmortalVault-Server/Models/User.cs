@@ -16,7 +16,7 @@ public class User
     public UserSettings UserSettings { get; set; }
     public UserTokens? UserTokens { get; set; }
     [JsonIgnore] public string? Mfa { get; set; }
-    public bool MfaEnabled => Mfa is not null;
+    public bool MfaEnabled => this.Mfa is not null;
 
     [JsonConverter(typeof(ListSerializer<string>))]
     public List<string> MfaRecoveryCodes { get; set; }

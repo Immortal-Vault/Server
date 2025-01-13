@@ -30,7 +30,7 @@ public class JwtRefreshMiddleware
                 var email = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
                 if (email != null)
                 {
-                    var newToken = _authService.GenerateAccessToken(email, Audience.ImmortalVaultClient);
+                    var newToken = this._authService.GenerateAccessToken(email, Audience.ImmortalVaultClient);
                     
                     context.Response.Cookies.Append("immortalVaultJwtToken", newToken, new CookieOptions
                     {

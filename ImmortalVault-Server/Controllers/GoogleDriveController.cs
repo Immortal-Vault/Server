@@ -25,7 +25,7 @@ public class GoogleDriveController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> UploadSecretFile([FromBody] GoogleDriveUploadRequest request)
     {
-        var user = await _dbContext.Users
+        var user = await this._dbContext.Users
             .Include(user => user.UserTokens)
             .FirstOrDefaultAsync(u => u.Email == User.FindFirst(ClaimTypes.Email)!.Value);
         if (user is null)
@@ -47,7 +47,7 @@ public class GoogleDriveController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetPasswordFile()
     {
-        var user = await _dbContext.Users
+        var user = await this._dbContext.Users
             .Include(user => user.UserTokens)
             .FirstOrDefaultAsync(u => u.Email == User.FindFirst(ClaimTypes.Email)!.Value);
         if (user is null)

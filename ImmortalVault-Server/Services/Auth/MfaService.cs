@@ -21,7 +21,7 @@ public class MfaService : IMfaService
 
     public MfaService(ApplicationDbContext dbContext)
     {
-        _dbContext = dbContext;
+        this._dbContext = dbContext;
     }
 
     public async Task<bool> UseUserMfa(User user, string stringMfa)
@@ -33,7 +33,7 @@ public class MfaService : IMfaService
 
         if (user.MfaRecoveryCodes is not { } codes || !codes.Contains(stringMfa))
         {
-            return await ValidateMfa(user.Mfa, stringMfa);
+            return ValidateMfa(user.Mfa, stringMfa);
         }
 
         var newCodes = codes.Where(c => c != stringMfa).ToArray();
@@ -86,7 +86,7 @@ public class MfaService : IMfaService
     {
         if (user.Mfa is null) return true;
         if (!Argon2.Verify(user.Password, password)) return false;
-        if (!await ValidateMfa(user.Mfa, totpCode)) return false;
+        if (!ValidateMfa(user.Mfa, totpCode)) return false;
 
         await this._dbContext.Users.Where(u => u.Id == user.Id).ExecuteUpdateAsync(u => u
             .SetProperty(p => p.Mfa, (string?)null).SetProperty(p => p.MfaRecoveryCodes, (List<string>?)null));
@@ -94,9 +94,9 @@ public class MfaService : IMfaService
         return true;
     }
 
-    private static Task<bool> ValidateMfa(string mfa, string stringMfa)
+    private static bool ValidateMfa(string mfa, string stringMfa)
     {
-        return Task.FromResult(new Totp(Base32Encoding.ToBytes(mfa)).VerifyTotp(stringMfa, out _,
-            VerificationWindow.RfcSpecifiedNetworkDelay));
+        return new Totp(Base32Encoding.ToBytes(mfa)).VerifyTotp(stringMfa, out _,
+            VerificationWindow.RfcSpecifiedNetworkDelay);
     }
 }

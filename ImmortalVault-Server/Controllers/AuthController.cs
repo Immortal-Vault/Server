@@ -42,7 +42,7 @@ public class AuthController : ControllerBase
         this._configuration = configuration;
         this._googleDriveService = googleDriveService;
         this._dbContext = dbContext;
-        _mfaService = mfaService;
+        this._mfaService = mfaService;
 
         this._aesSecretKey = configuration["AES:SECRET_KEY"]!;
         this._aesIv = configuration["AES:IV"]!;
@@ -96,7 +96,7 @@ public class AuthController : ControllerBase
     [HttpPost("signIn")]
     public async Task<IActionResult> SignIn([FromBody] SignInModel model)
     {
-        var user = await _dbContext.Users
+        var user = await this._dbContext.Users
             .Include(user => user.UserSettings)
             .Include(user => user.UserTokens)
             .FirstOrDefaultAsync(u =>
@@ -153,7 +153,7 @@ public class AuthController : ControllerBase
     [HttpPost("signIn/google")]
     public async Task<IActionResult> SignInGoogle([FromBody] GoogleAuthRequest request)
     {
-        var user = await _dbContext.Users
+        var user = await this._dbContext.Users
             .Include(user => user.UserTokens)
             .FirstOrDefaultAsync(u => u.Email == User.FindFirst(ClaimTypes.Email)!.Value);
         if (user is null)
@@ -233,7 +233,7 @@ public class AuthController : ControllerBase
     [HttpPost("signOut/google")]
     public async Task<IActionResult> SignOutGoogle([FromBody] GoogleSignOutRequest request)
     {
-        var user = await _dbContext.Users
+        var user = await this._dbContext.Users
             .Include(user => user.UserTokens)
             .FirstOrDefaultAsync(u => u.Email == User.FindFirst(ClaimTypes.Email)!.Value);
         if (user is null)
@@ -275,7 +275,7 @@ public class AuthController : ControllerBase
     [HttpGet("google")]
     public async Task<IActionResult> GetGoogleState()
     {
-        var user = await _dbContext.Users
+        var user = await this._dbContext.Users
             .Include(user => user.UserTokens)
             .FirstOrDefaultAsync(u => u.Email == User.FindFirst(ClaimTypes.Email)!.Value);
         if (user?.UserTokens is null)
