@@ -16,7 +16,7 @@ public interface IMfaService
 
 public class MfaService : IMfaService
 {
-    private static readonly Dictionary<int, string> _mfaRequests = new();
+    private readonly Dictionary<int, string> _mfaRequests = new();
     private readonly ApplicationDbContext _dbContext;
 
     public MfaService(ApplicationDbContext dbContext)
@@ -53,24 +53,24 @@ public class MfaService : IMfaService
     {
         if (user.Mfa is not null) return null;
         var mfa = Base32Encoding.ToString(KeyGeneration.GenerateRandomKey(11));
-        if (_mfaRequests.TryGetValue(user.Id, out var value))
+        if (this._mfaRequests.TryGetValue(user.Id, out var value))
         {
             return value;
         }
 
-        _mfaRequests.Add(user.Id, mfa);
+        this._mfaRequests.Add(user.Id, mfa);
         return mfa;
     }
 
 
     public async Task<string[]?> EnableMfa(User user, string totpCode)
     {
-        if (!_mfaRequests.TryGetValue(user.Id, out var mfa))
+        if (!this._mfaRequests.TryGetValue(user.Id, out var mfa))
             return null;
         var totp = new Totp(Base32Encoding.ToBytes(mfa));
         if (!totp.VerifyTotp(totpCode, out _, VerificationWindow.RfcSpecifiedNetworkDelay))
             return null;
-        _mfaRequests.Remove(user.Id);
+        this._mfaRequests.Remove(user.Id);
         var random = new Random();
         var codes = Enumerable.Range(0, 8).Select(_ => this.GenerateMfaRecoveryCode(random))
             .ToArray();
