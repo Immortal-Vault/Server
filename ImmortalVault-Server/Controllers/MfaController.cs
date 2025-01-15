@@ -13,11 +13,7 @@ using Microsoft.AspNetCore.Mvc;
 [Authorize]
 public class MfaController : ControllerBase
 {
-    public record EnableMfaRequest(string TotpCode);
-
-    public record DisableMfaRequest(string Password, string TotpCode);
-
-    public record ValidateMfaRequest(string TotpCode);
+    public record MfaRequest(string TotpCode);
 
     private readonly IMfaService _mfaService;
     private readonly ApplicationDbContext _dbContext;
@@ -47,7 +43,7 @@ public class MfaController : ControllerBase
     }
 
     [HttpPost("enable")]
-    public async Task<IActionResult> EnableMfa([FromBody] EnableMfaRequest request)
+    public async Task<IActionResult> EnableMfa([FromBody] MfaRequest request)
     {
         var user = await this.GetUser();
         if (user is null)
@@ -66,7 +62,7 @@ public class MfaController : ControllerBase
     }
 
     [HttpPost("disable")]
-    public async Task<IActionResult> DisableMfa([FromBody] DisableMfaRequest request)
+    public async Task<IActionResult> DisableMfa([FromBody] MfaRequest request)
     {
         var user = await this.GetUser();
         if (user is null)
@@ -75,7 +71,7 @@ public class MfaController : ControllerBase
         }
 
 
-        var result = await this._mfaService.DisableMfa(user, request.Password, request.TotpCode);
+        var result = await this._mfaService.DisableMfa(user, request.TotpCode);
         if (!result)
         {
             return BadRequest("INVALID_CREDENTIALS_OR_TOTP");
@@ -85,7 +81,7 @@ public class MfaController : ControllerBase
     }
 
     [HttpPost("validate")]
-    public async Task<IActionResult> ValidateMfa([FromBody] ValidateMfaRequest request)
+    public async Task<IActionResult> ValidateMfa([FromBody] MfaRequest request)
     {
         var user = await this.GetUser();
         if (user is null)

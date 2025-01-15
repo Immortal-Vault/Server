@@ -11,7 +11,7 @@ public interface IMfaService
     string GenerateMfaRecoveryCode(Random random);
     string? SetupMfa(User user);
     Task<string[]?> EnableMfa(User user, string totpCode);
-    Task<bool> DisableMfa(User user, string password, string totpCode);
+    Task<bool> DisableMfa(User user, string totpCode);
 }
 
 public class MfaService : IMfaService
@@ -51,8 +51,13 @@ public class MfaService : IMfaService
 
     public string? SetupMfa(User user)
     {
-        if (user.Mfa is not null) return null;
+        if (user.Mfa is not null)
+        {
+            return null;
+        }
+
         var mfa = Base32Encoding.ToString(KeyGeneration.GenerateRandomKey(11));
+
         if (this._mfaRequests.TryGetValue(user.Id, out var value))
         {
             return value;
@@ -66,10 +71,15 @@ public class MfaService : IMfaService
     public async Task<string[]?> EnableMfa(User user, string totpCode)
     {
         if (!this._mfaRequests.TryGetValue(user.Id, out var mfa))
+        {
             return null;
-        var totp = new Totp(Base32Encoding.ToBytes(mfa));
-        if (!totp.VerifyTotp(totpCode, out _, VerificationWindow.RfcSpecifiedNetworkDelay))
+        }
+
+        if (!ValidateMfa(mfa, totpCode))
+        {
             return null;
+        }
+
         this._mfaRequests.Remove(user.Id);
         var random = new Random();
         var codes = Enumerable.Range(0, 8).Select(_ => this.GenerateMfaRecoveryCode(random))
@@ -82,11 +92,17 @@ public class MfaService : IMfaService
         return codes;
     }
 
-    public async Task<bool> DisableMfa(User user, string password, string totpCode)
+    public async Task<bool> DisableMfa(User user, string totpCode)
     {
-        if (user.Mfa is null) return true;
-        if (!Argon2.Verify(user.Password, password)) return false;
-        if (!ValidateMfa(user.Mfa, totpCode)) return false;
+        if (user.Mfa is null)
+        {
+            return true;
+        }
+
+        if (!await this.UseUserMfa(user, totpCode))
+        {
+            return false;
+        }
 
         await this._dbContext.Users.Where(u => u.Id == user.Id).ExecuteUpdateAsync(u => u
             .SetProperty(p => p.Mfa, (string?)null).SetProperty(p => p.MfaRecoveryCodes, (List<string>?)null));
