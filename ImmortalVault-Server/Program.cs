@@ -92,6 +92,7 @@ app.UseCookiePolicy(new CookiePolicyOptions
 });
 
 app.UseMiddleware<JwtRefreshMiddleware>();
+app.UseMiddleware<ClientVersionMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
