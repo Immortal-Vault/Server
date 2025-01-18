@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace ImmortalVault_Server.Controllers;
 
 public record ChangeLanguageModel(string Language);
+
 public record ChangeTimeFormatModel(bool Is12HoursFormat);
 
 [ApiController]
@@ -37,10 +38,11 @@ public class UserController : ControllerBase
 
         try
         {
-            user.UserSettings.Language = model.Language;
-            this._dbContext.UsersSettings.Update(user.UserSettings);
-
-            await this._dbContext.SaveChangesAsync();
+            await this._dbContext.UsersSettings
+                .Where(u => u.Id == user.UserSettings.Id)
+                .ExecuteUpdateAsync(us => us
+                    .SetProperty(u => u.Language, model.Language)
+                );
 
             return Ok();
         }
@@ -50,7 +52,7 @@ public class UserController : ControllerBase
             return StatusCode(500, "An error occurred while updating the user's language.");
         }
     }
-    
+
     [Authorize]
     [HttpPost("changeTimeFormat")]
     public async Task<IActionResult> ChangeTimeFormat([FromBody] ChangeTimeFormatModel model)
@@ -69,17 +71,18 @@ public class UserController : ControllerBase
 
         try
         {
-            user.UserSettings.Is12HoursFormat = model.Is12HoursFormat;
-            this._dbContext.UsersSettings.Update(user.UserSettings);
-
-            await this._dbContext.SaveChangesAsync();
+            await this._dbContext.UsersSettings
+                .Where(us => us.Id == user.UserSettings.Id)
+                .ExecuteUpdateAsync(us => us
+                    .SetProperty(u => u.Is12HoursFormat, model.Is12HoursFormat)
+                );
 
             return Ok();
         }
         catch (Exception e)
         {
             Console.Error.WriteLine(e);
-            return StatusCode(500, "An error occurred while updating the user's language.");
+            return StatusCode(500, "An error occurred while updating the user's time format.");
         }
     }
 }

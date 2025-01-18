@@ -96,8 +96,7 @@ public class AuthController : ControllerBase
     [HttpPost("signIn")]
     public async Task<IActionResult> SignIn([FromBody] SignInModel model)
     {
-        var user = await this._dbContext.Users
-            .Include(user => user.UserSettings)
+        var user = await this._dbContext.Users.Include(user => user.UserSettings)
             .Include(user => user.UserTokens)
             .FirstOrDefaultAsync(u =>
                 u.Email.ToLower() == model.Email.ToLower() ||
@@ -153,9 +152,11 @@ public class AuthController : ControllerBase
     [HttpPost("signIn/google")]
     public async Task<IActionResult> SignInGoogle([FromBody] GoogleAuthRequest request)
     {
+        var userEmail = User.FindFirst(ClaimTypes.Email)!.Value;
         var user = await this._dbContext.Users
             .Include(user => user.UserTokens)
-            .FirstOrDefaultAsync(u => u.Email == User.FindFirst(ClaimTypes.Email)!.Value);
+            .FirstOrDefaultAsync(u => u.Email == userEmail);
+
         if (user is null)
         {
             return NotFound();
@@ -187,11 +188,13 @@ public class AuthController : ControllerBase
 
             if (user.UserTokens is { })
             {
-                user.UserTokens.AccessToken = encryptedAccessToken;
-                user.UserTokens.RefreshToken = encryptedRefreshToken;
-                user.UserTokens.TokenExpiryTime = tokenExpiryTime;
-
-                this._dbContext.UsersTokens.Update(user.UserTokens);
+                await this._dbContext.UsersTokens
+                    .Where(t => t.Id == user.UserTokens.Id)
+                    .ExecuteUpdateAsync(t => t
+                        .SetProperty(t => t.AccessToken, encryptedAccessToken)
+                        .SetProperty(t => t.RefreshToken, encryptedRefreshToken)
+                        .SetProperty(t => t.TokenExpiryTime, tokenExpiryTime)
+                    );
             }
             else
             {
@@ -200,13 +203,11 @@ public class AuthController : ControllerBase
                     AccessToken = encryptedAccessToken,
                     RefreshToken = encryptedRefreshToken,
                     TokenExpiryTime = tokenExpiryTime,
+                    UserId = user.Id
                 };
 
-                user.UserTokens = userTokens;
                 await this._dbContext.UsersTokens.AddAsync(userTokens);
             }
-
-            this._dbContext.Users.Update(user);
 
             await this._dbContext.SaveChangesAsync();
 
@@ -259,8 +260,6 @@ public class AuthController : ControllerBase
             }
 
             this._dbContext.UsersTokens.Remove(user.UserTokens);
-            this._dbContext.Users.Update(user);
-
             await this._dbContext.SaveChangesAsync();
 
             return Ok();
