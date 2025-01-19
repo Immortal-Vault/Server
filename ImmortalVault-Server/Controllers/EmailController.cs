@@ -52,12 +52,12 @@ public class EmailController : ControllerBase
             mailMessage.To.Add(consumer);
 
             await smtpClient.SendMailAsync(mailMessage);
-            return this.Ok();
+            return Ok();
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine(ex.Message);
-            return this.StatusCode(500, new { Message = "Error sending email", Details = ex.Message });
+            return StatusCode(500, new { Message = "Error sending email", Details = ex.Message });
         }
     }
 }

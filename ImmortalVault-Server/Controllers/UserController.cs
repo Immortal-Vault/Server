@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace ImmortalVault_Server.Controllers;
 
 public record ChangeLanguageModel(string Language);
+
 public record ChangeTimeFormatModel(bool Is12HoursFormat);
 
 [ApiController]
@@ -23,7 +24,7 @@ public class UserController : ControllerBase
     [HttpPost("changeLanguage")]
     public async Task<IActionResult> ChangeLanguage([FromBody] ChangeLanguageModel model)
     {
-        var email = this.User.FindFirst(ClaimTypes.Email)!.Value;
+        var email = User.FindFirst(ClaimTypes.Email)!.Value;
 
         var user = await this._dbContext.Users
             .Include(u => u.UserSettings)
@@ -32,30 +33,31 @@ public class UserController : ControllerBase
 
         if (user is null)
         {
-            return this.NotFound();
+            return NotFound();
         }
 
         try
         {
-            user.UserSettings.Language = model.Language;
-            this._dbContext.UsersSettings.Update(user.UserSettings);
+            await this._dbContext.UsersSettings
+                .Where(u => u.Id == user.UserSettings.Id)
+                .ExecuteUpdateAsync(us => us
+                    .SetProperty(u => u.Language, model.Language)
+                );
 
-            await this._dbContext.SaveChangesAsync();
-
-            return this.Ok();
+            return Ok();
         }
         catch (Exception e)
         {
             Console.Error.WriteLine(e);
-            return this.StatusCode(500, "An error occurred while updating the user's language.");
+            return StatusCode(500, "An error occurred while updating the user's language.");
         }
     }
-    
+
     [Authorize]
     [HttpPost("changeTimeFormat")]
     public async Task<IActionResult> ChangeTimeFormat([FromBody] ChangeTimeFormatModel model)
     {
-        var email = this.User.FindFirst(ClaimTypes.Email)!.Value;
+        var email = User.FindFirst(ClaimTypes.Email)!.Value;
 
         var user = await this._dbContext.Users
             .Include(u => u.UserSettings)
@@ -64,22 +66,23 @@ public class UserController : ControllerBase
 
         if (user is null)
         {
-            return this.NotFound();
+            return NotFound();
         }
 
         try
         {
-            user.UserSettings.Is12HoursFormat = model.Is12HoursFormat;
-            this._dbContext.UsersSettings.Update(user.UserSettings);
+            await this._dbContext.UsersSettings
+                .Where(us => us.Id == user.UserSettings.Id)
+                .ExecuteUpdateAsync(us => us
+                    .SetProperty(u => u.Is12HoursFormat, model.Is12HoursFormat)
+                );
 
-            await this._dbContext.SaveChangesAsync();
-
-            return this.Ok();
+            return Ok();
         }
         catch (Exception e)
         {
             Console.Error.WriteLine(e);
-            return this.StatusCode(500, "An error occurred while updating the user's language.");
+            return StatusCode(500, "An error occurred while updating the user's time format.");
         }
     }
 }
