@@ -16,7 +16,7 @@ namespace ImmortalVault_Server.Controllers;
 
 public record SignUpModel(string Username, string Email, string Password, string Language, bool Is12HoursFormat);
 
-public record SignInModel(string Email, string Password);
+public record SignInModel(string Email, string Password, string? MfaCode);
 
 public record GoogleAuthRequest(string Code);
 
@@ -29,18 +29,20 @@ public class AuthController : ControllerBase
     private readonly IAuthService _authService;
     private readonly IConfiguration _configuration;
     private readonly IGoogleDriveService _googleDriveService;
+    private readonly IMfaService _mfaService;
     private readonly ApplicationDbContext _dbContext;
 
     private readonly string _aesSecretKey;
     private readonly string _aesIv;
 
     public AuthController(IAuthService authService, IConfiguration configuration,
-        IGoogleDriveService googleDriveService, ApplicationDbContext dbContext)
+        IGoogleDriveService googleDriveService, ApplicationDbContext dbContext, IMfaService mfaService)
     {
         this._authService = authService;
         this._configuration = configuration;
         this._googleDriveService = googleDriveService;
         this._dbContext = dbContext;
+        this._mfaService = mfaService;
 
         this._aesSecretKey = configuration["AES:SECRET_KEY"]!;
         this._aesIv = configuration["AES:IV"]!;
@@ -55,7 +57,7 @@ public class AuthController : ControllerBase
             .FirstOrDefaultAsync();
         if (sameUser != null)
         {
-            return this.StatusCode(303);
+            return StatusCode(303);
         }
 
         try
@@ -66,7 +68,7 @@ public class AuthController : ControllerBase
                 Email = model.Email.ToLower(),
                 Password = Argon2.Hash(model.Password)
             };
-            
+
             await this._dbContext.Users.AddAsync(user);
             await this._dbContext.SaveChangesAsync();
 
@@ -76,42 +78,54 @@ public class AuthController : ControllerBase
                 Language = model.Language,
                 Is12HoursFormat = model.Is12HoursFormat
             };
-            
+
             await this._dbContext.UsersSettings.AddAsync(settings);
-            
+
             await this._dbContext.SaveChangesAsync();
 
 
-            return this.Ok();
+            return Ok();
         }
         catch (Exception e)
         {
             Console.Error.WriteLine(e);
-            return this.StatusCode(500, "An error occurred while creating the user.");
+            return StatusCode(500, "An error occurred while creating the user.");
         }
     }
 
     [HttpPost("signIn")]
     public async Task<IActionResult> SignIn([FromBody] SignInModel model)
     {
-        var user = await this._dbContext.Users
-            .Include(user => user.UserSettings)
+        var user = await this._dbContext.Users.Include(user => user.UserSettings)
             .Include(user => user.UserTokens)
             .FirstOrDefaultAsync(u =>
                 u.Email.ToLower() == model.Email.ToLower() ||
                 u.Name.ToLower() == model.Email.ToLower());
         if (user is null)
         {
-            return this.NotFound();
+            return NotFound();
         }
 
         if (!Argon2.Verify(user.Password, model.Password))
         {
-            return this.StatusCode(409);
+            return StatusCode(409);
+        }
+
+        if (user.MfaEnabled)
+        {
+            if (model.MfaCode is null)
+            {
+                return BadRequest("MFA");
+            }
+
+            if (!await this._mfaService.UseUserMfa(user, model.MfaCode))
+            {
+                return BadRequest("INVALID_MFA");
+            }
         }
 
         var token = this._authService.GenerateAccessToken(user.Email, Audience.ImmortalVaultClient);
-        this.Response.Cookies.Append("immortalVaultJwtToken", token, new CookieOptions
+        Response.Cookies.Append("immortalVaultJwtToken", token, new CookieOptions
         {
             HttpOnly = true,
             Secure = true,
@@ -123,27 +137,29 @@ public class AuthController : ControllerBase
         var is12Hours = user.UserSettings.Is12HoursFormat;
         var username = user.Name;
 
-        return this.Ok(new { localization, is12Hours, username });
+        return Ok(new { localization, is12Hours, username });
     }
 
     [Authorize]
     [HttpPost("signOut")]
     public new IActionResult SignOut()
     {
-        this.Response.Cookies.Delete("immortalVaultJwtToken");
-        return this.Ok();
+        Response.Cookies.Delete("immortalVaultJwtToken");
+        return Ok();
     }
 
     [Authorize]
     [HttpPost("signIn/google")]
     public async Task<IActionResult> SignInGoogle([FromBody] GoogleAuthRequest request)
     {
+        var userEmail = User.FindFirst(ClaimTypes.Email)!.Value;
         var user = await this._dbContext.Users
             .Include(user => user.UserTokens)
-            .FirstOrDefaultAsync(u => u.Email == this.User.FindFirst(ClaimTypes.Email)!.Value);
+            .FirstOrDefaultAsync(u => u.Email == userEmail);
+
         if (user is null)
         {
-            return this.NotFound();
+            return NotFound();
         }
 
         try
@@ -172,11 +188,13 @@ public class AuthController : ControllerBase
 
             if (user.UserTokens is { })
             {
-                user.UserTokens.AccessToken = encryptedAccessToken;
-                user.UserTokens.RefreshToken = encryptedRefreshToken;
-                user.UserTokens.TokenExpiryTime = tokenExpiryTime;
-
-                this._dbContext.UsersTokens.Update(user.UserTokens);
+                await this._dbContext.UsersTokens
+                    .Where(t => t.Id == user.UserTokens.Id)
+                    .ExecuteUpdateAsync(t => t
+                        .SetProperty(t => t.AccessToken, encryptedAccessToken)
+                        .SetProperty(t => t.RefreshToken, encryptedRefreshToken)
+                        .SetProperty(t => t.TokenExpiryTime, tokenExpiryTime)
+                    );
             }
             else
             {
@@ -185,13 +203,11 @@ public class AuthController : ControllerBase
                     AccessToken = encryptedAccessToken,
                     RefreshToken = encryptedRefreshToken,
                     TokenExpiryTime = tokenExpiryTime,
+                    UserId = user.Id
                 };
 
-                user.UserTokens = userTokens;
                 await this._dbContext.UsersTokens.AddAsync(userTokens);
             }
-
-            this._dbContext.Users.Update(user);
 
             await this._dbContext.SaveChangesAsync();
 
@@ -206,11 +222,11 @@ public class AuthController : ControllerBase
             var userInfo = await userInfoService.Userinfo.Get().ExecuteAsync();
             var email = userInfo.Email;
 
-            return this.Ok(new { hasSecretFile, email });
+            return Ok(new { hasSecretFile, email });
         }
         catch (Exception ex)
         {
-            return this.BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message });
         }
     }
 
@@ -220,17 +236,17 @@ public class AuthController : ControllerBase
     {
         var user = await this._dbContext.Users
             .Include(user => user.UserTokens)
-            .FirstOrDefaultAsync(u => u.Email == this.User.FindFirst(ClaimTypes.Email)!.Value);
+            .FirstOrDefaultAsync(u => u.Email == User.FindFirst(ClaimTypes.Email)!.Value);
         if (user is null)
         {
-            return this.NotFound();
+            return NotFound();
         }
 
         try
         {
             if (user.UserTokens is null)
             {
-                return this.Ok();
+                return Ok();
             }
 
             if (!request.KeepData)
@@ -244,15 +260,13 @@ public class AuthController : ControllerBase
             }
 
             this._dbContext.UsersTokens.Remove(user.UserTokens);
-            this._dbContext.Users.Update(user);
-
             await this._dbContext.SaveChangesAsync();
 
-            return this.Ok();
+            return Ok();
         }
         catch (Exception ex)
         {
-            return this.BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message });
         }
     }
 
@@ -262,10 +276,10 @@ public class AuthController : ControllerBase
     {
         var user = await this._dbContext.Users
             .Include(user => user.UserTokens)
-            .FirstOrDefaultAsync(u => u.Email == this.User.FindFirst(ClaimTypes.Email)!.Value);
+            .FirstOrDefaultAsync(u => u.Email == User.FindFirst(ClaimTypes.Email)!.Value);
         if (user?.UserTokens is null)
         {
-            return this.NotFound();
+            return NotFound();
         }
 
         if (this._googleDriveService.IsTokenExpired(user))
@@ -284,13 +298,13 @@ public class AuthController : ControllerBase
         var userInfo = await userInfoService.Userinfo.Get().ExecuteAsync();
         var email = userInfo.Email;
 
-        return this.Ok(new { email });
+        return Ok(new { email });
     }
 
     [Authorize]
     [HttpGet("ping")]
     public IActionResult Ping()
     {
-        return this.Ok();
+        return Ok();
     }
 }

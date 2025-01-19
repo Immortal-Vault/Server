@@ -6,6 +6,7 @@ using Google.Apis.Drive.v3.Data;
 using Google.Apis.Services;
 using ImmortalVault_Server.Models;
 using ImmortalVault_Server.Services.AES;
+using Microsoft.EntityFrameworkCore;
 using DriveFile = Google.Apis.Drive.v3.Data.File;
 using User = ImmortalVault_Server.Models.User;
 
@@ -28,7 +29,7 @@ public class GoogleDriveService : IGoogleDriveService
 {
     private readonly IConfiguration _configuration;
     private readonly ApplicationDbContext _dbContext;
-    
+
     private readonly string _aesSecretKey;
     private readonly string _aesIv;
     private const string SecretFileName = "immortal-vault.pass";
@@ -37,11 +38,11 @@ public class GoogleDriveService : IGoogleDriveService
     {
         this._configuration = configuration;
         this._dbContext = dbContext;
-        
+
         this._aesSecretKey = configuration["AES:SECRET_KEY"]!;
         this._aesIv = configuration["AES:IV"]!;
     }
-    
+
     public async Task UploadOrReplaceSecretFile(User user, string content)
     {
         if (await this.DoesSecretFileExists(user))
@@ -72,7 +73,7 @@ public class GoogleDriveService : IGoogleDriveService
         uploadRequest.Fields = "id";
         await uploadRequest.UploadAsync();
     }
-    
+
     public async Task DeleteSecretFile(User user)
     {
         var service = this.GetGoogleDriveService(user);
@@ -80,9 +81,9 @@ public class GoogleDriveService : IGoogleDriveService
         {
             return;
         }
-        
+
         var passwordFileInfo = await this.GetSecretFile(user);
-        if (passwordFileInfo is not {} info)
+        if (passwordFileInfo is not { } info)
         {
             return;
         }
@@ -98,7 +99,7 @@ public class GoogleDriveService : IGoogleDriveService
         {
             return null;
         }
-        
+
         var fileList = await this.GetAllFiles(user);
 
         var fileId = fileList.Files.FirstOrDefault(f => f.Name == SecretFileName)?.Id;
@@ -136,7 +137,7 @@ public class GoogleDriveService : IGoogleDriveService
         {
             return null;
         }
-        
+
         var decryptedAccessToken = AesEncryption.Decrypt(tokens.AccessToken, this._aesSecretKey, this._aesIv);
         var credential = GoogleCredential.FromAccessToken(decryptedAccessToken);
 
@@ -145,7 +146,7 @@ public class GoogleDriveService : IGoogleDriveService
             HttpClientInitializer = credential
         });
     }
-    
+
     public async Task<bool> DoesSecretFileExists(User user)
     {
         var fileList = await this.GetAllFiles(user);
@@ -160,7 +161,7 @@ public class GoogleDriveService : IGoogleDriveService
         {
             return false;
         }
-        
+
         var oAuth2Client = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
         {
             ClientSecrets = new ClientSecrets
@@ -169,46 +170,31 @@ public class GoogleDriveService : IGoogleDriveService
                 ClientSecret = this._configuration["GOOGLE:CLIENT_SECRET"],
             }
         });
-        
+
         var decryptedRefreshToken = AesEncryption.Decrypt(tokens.RefreshToken, this._aesSecretKey, this._aesIv);
-        var tokenResponse = await oAuth2Client.RefreshTokenAsync(user.Id.ToString(), decryptedRefreshToken, CancellationToken.None);
+        var tokenResponse =
+            await oAuth2Client.RefreshTokenAsync(user.Id.ToString(), decryptedRefreshToken, CancellationToken.None);
         if (tokenResponse is null)
         {
             return false;
         }
-        
+
         var encryptedAccessToken = AesEncryption.Encrypt(tokenResponse.AccessToken, this._aesSecretKey, this._aesIv);
         var encryptedRefreshToken = AesEncryption.Encrypt(tokenResponse.RefreshToken, this._aesSecretKey, this._aesIv);
         var tokenExpiryTime = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresInSeconds.GetValueOrDefault(3600));
-        
-        if (user.UserTokens is { })
-        {
-            user.UserTokens.AccessToken = encryptedAccessToken;
-            user.UserTokens.RefreshToken = encryptedRefreshToken;
-            user.UserTokens.TokenExpiryTime = tokenExpiryTime;
 
-            this._dbContext.UsersTokens.Update(user.UserTokens);
-        }
-        else
-        {
-            var userTokens = new UserTokens
-            {
-                AccessToken = encryptedAccessToken,
-                RefreshToken = encryptedRefreshToken,
-                TokenExpiryTime = tokenExpiryTime
-            };
+        await this._dbContext.UsersTokens
+            .Where(t => t.Id == tokens.Id)
+            .ExecuteUpdateAsync(t => t
+                .SetProperty(t => t.AccessToken, encryptedAccessToken)
+                .SetProperty(t => t.RefreshToken, encryptedRefreshToken)
+                .SetProperty(t => t.TokenExpiryTime, tokenExpiryTime)
+            );
 
-            user.UserTokens = userTokens;
-            await this._dbContext.UsersTokens.AddAsync(userTokens);
-        }
-
-        this._dbContext.Users.Update(user);
-
-        await this._dbContext.SaveChangesAsync();
 
         return true;
     }
-    
+
     public bool IsTokenExpired(User user)
     {
         if (user.UserTokens is not { } tokens)
