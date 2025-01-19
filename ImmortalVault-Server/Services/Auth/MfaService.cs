@@ -56,7 +56,7 @@ public class MfaService : IMfaService
             return null;
         }
 
-        var mfa = Base32Encoding.ToString(KeyGeneration.GenerateRandomKey(11));
+        var mfa = Base32Encoding.ToString(KeyGeneration.GenerateRandomKey(20));
 
         if (this._mfaRequests.TryGetValue(user.Id, out var value))
         {
