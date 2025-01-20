@@ -174,6 +174,7 @@ public class GoogleDriveService : IGoogleDriveService
         var decryptedRefreshToken = AesEncryption.Decrypt(tokens.RefreshToken, this._aesSecretKey, this._aesIv);
         var tokenResponse =
             await oAuth2Client.RefreshTokenAsync(user.Id.ToString(), decryptedRefreshToken, CancellationToken.None);
+        
         if (tokenResponse is null)
         {
             return false;
@@ -183,6 +184,10 @@ public class GoogleDriveService : IGoogleDriveService
         var encryptedRefreshToken = AesEncryption.Encrypt(tokenResponse.RefreshToken, this._aesSecretKey, this._aesIv);
         var tokenExpiryTime = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresInSeconds.GetValueOrDefault(3600));
 
+        user.UserTokens.AccessToken = encryptedAccessToken;
+        user.UserTokens.RefreshToken = encryptedRefreshToken;
+        user.UserTokens.TokenExpiryTime = tokenExpiryTime;
+        
         await this._dbContext.UsersTokens
             .Where(t => t.Id == tokens.Id)
             .ExecuteUpdateAsync(t => t
@@ -190,7 +195,6 @@ public class GoogleDriveService : IGoogleDriveService
                 .SetProperty(t => t.RefreshToken, encryptedRefreshToken)
                 .SetProperty(t => t.TokenExpiryTime, tokenExpiryTime)
             );
-
 
         return true;
     }
