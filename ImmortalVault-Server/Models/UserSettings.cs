@@ -6,5 +6,4 @@ public class UserSettings
     public string Language { get; set; }
     public bool Is12HoursFormat { get; set; }
     public int UserId { get; set; }
-    public User User { get; set; }
 }
