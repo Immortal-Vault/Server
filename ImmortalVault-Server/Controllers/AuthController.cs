@@ -303,8 +303,12 @@ public class AuthController : ControllerBase
 
     [Authorize]
     [HttpGet("ping")]
-    public IActionResult Ping()
+    public async Task<IActionResult> Ping()
     {
-        return Ok();
+        var user = await this._dbContext.Users
+            .Include(user => user.UserSettings)
+            .FirstOrDefaultAsync(u => u.Email == User.FindFirst(ClaimTypes.Email)!.Value);
+
+        return Ok(user);
     }
 }

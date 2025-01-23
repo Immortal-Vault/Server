@@ -17,12 +17,13 @@ public sealed class ApplicationDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        var builder = modelBuilder.Entity<User>();
+        modelBuilder.Entity<UserSettings>().HasOne<User>()
+            .WithOne()
+            .HasForeignKey<User>(e => e.Id)
+            .HasPrincipalKey<UserSettings>(e => e.UserId)
+            .IsRequired();
 
-        builder
-            .HasOne(e => e.UserSettings)
-            .WithOne(e => e.User)
-            .HasForeignKey<UserSettings>(e => e.UserId);
+        var builder = modelBuilder.Entity<User>();
 
         builder
             .HasOne(e => e.UserTokens)
