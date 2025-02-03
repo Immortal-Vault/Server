@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ImmortalVault_Server.Controllers;
 
-public record GoogleDriveUploadRequest(string Content);
+public record GoogleDriveUploadRequest(string Content, string Hash);
 
 [ApiController]
 [Route("api/googleDrive/secretFile")]
@@ -38,21 +38,25 @@ public class GoogleDriveController : ControllerBase
             await this._googleDriveService.UpdateTokens(user);
         }
         
-        await this._googleDriveService.UploadOrReplaceSecretFile(user, request.Content);
+        var resultInfo = await this._googleDriveService.UploadOrReplaceSecretFile(user, request.Content, request.Hash);
+        if (resultInfo is { Result: false, Conflict: true })
+        {
+            return Conflict(resultInfo.Hash);
+        }
         
-        return Ok();
+        return Ok(resultInfo.Hash);
     }
     
     [Authorize]
     [HttpGet]
-    public async Task<IActionResult> GetPasswordFile()
+    public async Task<IActionResult> GetSecretFile()
     {
         var user = await this._dbContext.Users
             .Include(user => user.UserTokens)
             .FirstOrDefaultAsync(u => u.Email == User.FindFirst(ClaimTypes.Email)!.Value);
         if (user is null)
         {
-            return NotFound("Account not found");
+            return NotFound("ACCOUNT_NOT_FOUND");
         }
 
         if (this._googleDriveService.IsTokenExpired(user))
@@ -63,9 +67,9 @@ public class GoogleDriveController : ControllerBase
         var fileContent = await this._googleDriveService.GetSecretFile(user);
         if (fileContent is null)
         {
-            return NotFound("Secret file not found");
+            return NotFound("SECRET_NOT_FOUND");
         }
         
-        return Ok(fileContent.Value.Content);
+        return Ok(new { fileContent.Value.Content, fileContent.Value.Hash });
     }
 }
