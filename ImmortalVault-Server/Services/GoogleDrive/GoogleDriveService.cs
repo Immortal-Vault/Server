@@ -4,8 +4,8 @@ using Google.Apis.Auth.OAuth2.Flows;
 using Google.Apis.Drive.v3;
 using Google.Apis.Drive.v3.Data;
 using Google.Apis.Services;
-using ImmortalVault_Server.Models;
 using ImmortalVault_Server.Services.AES;
+using ImmortalVault_Server.Utils;
 using Microsoft.EntityFrameworkCore;
 using DriveFile = Google.Apis.Drive.v3.Data.File;
 using User = ImmortalVault_Server.Models.User;
@@ -14,10 +14,10 @@ namespace ImmortalVault_Server.Services.GoogleDrive;
 
 public interface IGoogleDriveService
 {
-    Task UploadOrReplaceSecretFile(User user, string content);
-    Task UploadSecretFile(User user, string content);
+    Task<(bool Result, bool Conflict, string? Hash)> UploadOrReplaceSecretFile(User user, string content, string hash);
+    Task<(bool Result, bool Conflict, string? Hash)> UploadSecretFile(User user, string content, string hash);
     Task DeleteSecretFile(User user);
-    Task<(string Id, string Content)?> GetSecretFile(User user);
+    Task<(string Id, string Content, string Hash)?> GetSecretFile(User user);
     Task<FileList> GetAllFiles(User user);
     DriveService? GetGoogleDriveService(User user);
     Task<bool> DoesSecretFileExists(User user);
@@ -43,35 +43,53 @@ public class GoogleDriveService : IGoogleDriveService
         this._aesIv = configuration["AES:IV"]!;
     }
 
-    public async Task UploadOrReplaceSecretFile(User user, string content)
+    public async Task<(bool Result, bool Conflict, string? Hash)> UploadOrReplaceSecretFile(User user, string content,
+        string hash)
     {
-        if (await this.DoesSecretFileExists(user))
-        {
-            await this.DeleteSecretFile(user);
-        }
-
-        await this.UploadSecretFile(user, content);
+        return await this.UploadSecretFile(user, content, hash);
     }
 
-    public async Task UploadSecretFile(User user, string content)
+    public async Task<(bool Result, bool Conflict, string? Hash)> UploadSecretFile(User user, string content,
+        string hash)
     {
         var service = this.GetGoogleDriveService(user);
         if (service is null)
         {
-            return;
+            return (false, false, null);
         }
-
-        var fileMetadata = new DriveFile
-        {
-            Name = SecretFileName,
-            Parents = new List<string> { "appDataFolder" }
-        };
 
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(content));
 
-        var uploadRequest = service.Files.Create(fileMetadata, stream, "plain/text");
-        uploadRequest.Fields = "id";
-        await uploadRequest.UploadAsync();
+        var serverSecretFile = await this.GetSecretFile(user);
+
+        if (serverSecretFile is not null)
+        {
+            if (!serverSecretFile.Value.Hash.SequenceEqual(hash))
+            {
+                return (false, true, serverSecretFile.Value.Hash);
+            }
+
+            stream.Position = 0;
+            var updateRequest = service.Files.Update(new DriveFile(), serverSecretFile.Value.Id, stream, "plain/text");
+            updateRequest.Fields = "id";
+            await updateRequest.UploadAsync();
+        }
+        else
+        {
+            stream.Position = 0;
+            var secretFileMetadata = new DriveFile
+            {
+                Name = SecretFileName,
+                Parents = new List<string> { "appDataFolder" }
+            };
+
+            var createRequest = service.Files.Create(secretFileMetadata, stream, "plain/text");
+            createRequest.Fields = "id";
+            await createRequest.UploadAsync();
+        }
+
+        var newHash = HashUtils.ComputeSHA256Hash(content);
+        return (true, false, newHash);
     }
 
     public async Task DeleteSecretFile(User user)
@@ -92,7 +110,7 @@ public class GoogleDriveService : IGoogleDriveService
         await deleteFileRequest.ExecuteAsync();
     }
 
-    public async Task<(string Id, string Content)?> GetSecretFile(User user)
+    public async Task<(string Id, string Content, string Hash)?> GetSecretFile(User user)
     {
         var service = this.GetGoogleDriveService(user);
         if (service is null)
@@ -115,7 +133,11 @@ public class GoogleDriveService : IGoogleDriveService
 
         stream.Position = 0;
         using var reader = new StreamReader(stream);
-        return (fileId, await reader.ReadToEndAsync());
+
+        var content = await reader.ReadToEndAsync();
+        var hash = HashUtils.ComputeSHA256Hash(content);
+
+        return (fileId, content, hash);
     }
 
     public async Task<FileList> GetAllFiles(User user)
@@ -174,7 +196,7 @@ public class GoogleDriveService : IGoogleDriveService
         var decryptedRefreshToken = AesEncryption.Decrypt(tokens.RefreshToken, this._aesSecretKey, this._aesIv);
         var tokenResponse =
             await oAuth2Client.RefreshTokenAsync(user.Id.ToString(), decryptedRefreshToken, CancellationToken.None);
-        
+
         if (tokenResponse is null)
         {
             return false;
@@ -187,7 +209,7 @@ public class GoogleDriveService : IGoogleDriveService
         user.UserTokens.AccessToken = encryptedAccessToken;
         user.UserTokens.RefreshToken = encryptedRefreshToken;
         user.UserTokens.TokenExpiryTime = tokenExpiryTime;
-        
+
         await this._dbContext.UsersTokens
             .Where(t => t.Id == tokens.Id)
             .ExecuteUpdateAsync(t => t
