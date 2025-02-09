@@ -211,7 +211,7 @@ public class AuthController : ControllerBase
 
             await this._dbContext.SaveChangesAsync();
 
-            var hasSecretFile = await this._googleDriveService.GetSecretFile(user) != null;
+            var hasSecretFile = await this._googleDriveService.GetSecretFile(user) is not null;
 
             var credential = GoogleCredential.FromAccessToken(tokenResponse.AccessToken);
             var userInfoService = new Oauth2Service(new BaseClientService.Initializer
@@ -237,6 +237,7 @@ public class AuthController : ControllerBase
         var user = await this._dbContext.Users
             .Include(user => user.UserTokens)
             .FirstOrDefaultAsync(u => u.Email == User.FindFirst(ClaimTypes.Email)!.Value);
+        
         if (user is null)
         {
             return NotFound();
