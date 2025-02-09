@@ -7,5 +7,4 @@ public class UserTokens
     public string RefreshToken { get; set; }
     public DateTime TokenExpiryTime { get; set; }
     public int UserId { get; set; }
-    public User User { get; set; }
 }
