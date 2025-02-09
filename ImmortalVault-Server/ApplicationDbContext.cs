@@ -12,7 +12,7 @@ public sealed class ApplicationDbContext : DbContext
 
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
     {
-        ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
+        ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.TrackAll;
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -27,8 +27,9 @@ public sealed class ApplicationDbContext : DbContext
 
         builder
             .HasOne(e => e.UserTokens)
-            .WithOne(e => e.User)
-            .HasForeignKey<UserTokens>(e => e.UserId);
+            .WithOne()
+            .HasForeignKey<UserTokens>(e => e.UserId)
+            .HasPrincipalKey<User>(e => e.Id);
 
         builder.Property(e => e.MfaRecoveryCodes).HasColumnType("json").HasConversion(
             v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null),

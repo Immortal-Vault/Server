@@ -26,7 +26,7 @@ public class UserController : ControllerBase
     {
         var email = User.FindFirst(ClaimTypes.Email)!.Value;
 
-        var user = await this._dbContext.Users
+        var user = await this._dbContext.Users.AsNoTrackingWithIdentityResolution()
             .Include(u => u.UserSettings)
             .Where(u => u.Email == email)
             .FirstOrDefaultAsync();
@@ -38,7 +38,7 @@ public class UserController : ControllerBase
 
         try
         {
-            await this._dbContext.UsersSettings
+            await this._dbContext.UsersSettings.AsNoTrackingWithIdentityResolution()
                 .Where(u => u.Id == user.UserSettings.Id)
                 .ExecuteUpdateAsync(us => us
                     .SetProperty(u => u.Language, model.Language)
@@ -59,7 +59,7 @@ public class UserController : ControllerBase
     {
         var email = User.FindFirst(ClaimTypes.Email)!.Value;
 
-        var user = await this._dbContext.Users
+        var user = await this._dbContext.Users.AsNoTrackingWithIdentityResolution()
             .Include(u => u.UserSettings)
             .Where(u => u.Email == email)
             .FirstOrDefaultAsync();
@@ -71,7 +71,7 @@ public class UserController : ControllerBase
 
         try
         {
-            await this._dbContext.UsersSettings
+            await this._dbContext.UsersSettings.AsNoTrackingWithIdentityResolution()
                 .Where(us => us.Id == user.UserSettings.Id)
                 .ExecuteUpdateAsync(us => us
                     .SetProperty(u => u.Is12HoursFormat, model.Is12HoursFormat)

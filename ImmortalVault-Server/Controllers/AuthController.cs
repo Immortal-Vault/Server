@@ -51,7 +51,7 @@ public class AuthController : ControllerBase
     [HttpPost("signUp")]
     public async Task<IActionResult> SignUp([FromBody] SignUpModel model)
     {
-        var sameUser = await this._dbContext.Users
+        var sameUser = await this._dbContext.Users.AsNoTrackingWithIdentityResolution()
             .Where(u => u.Email.ToLower() == model.Email.ToLower() ||
                         u.Name.ToLower() == model.Username.ToLower())
             .FirstOrDefaultAsync();
@@ -96,7 +96,7 @@ public class AuthController : ControllerBase
     [HttpPost("signIn")]
     public async Task<IActionResult> SignIn([FromBody] SignInModel model)
     {
-        var user = await this._dbContext.Users.Include(user => user.UserSettings)
+        var user = await this._dbContext.Users.AsNoTrackingWithIdentityResolution().Include(user => user.UserSettings)
             .Include(user => user.UserTokens)
             .FirstOrDefaultAsync(u =>
                 u.Email.ToLower() == model.Email.ToLower() ||
@@ -153,8 +153,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> SignInGoogle([FromBody] GoogleAuthRequest request)
     {
         var userEmail = User.FindFirst(ClaimTypes.Email)!.Value;
-        var user = await this._dbContext.Users
-            .Include(user => user.UserTokens)
+        var user = await this._dbContext.Users.Include(user => user.UserTokens)
             .FirstOrDefaultAsync(u => u.Email == userEmail);
 
         if (user is null)
@@ -195,6 +194,7 @@ public class AuthController : ControllerBase
                         .SetProperty(t => t.RefreshToken, encryptedRefreshToken)
                         .SetProperty(t => t.TokenExpiryTime, tokenExpiryTime)
                     );
+                await this._dbContext.Entry(user).ReloadAsync();
             }
             else
             {
@@ -206,10 +206,10 @@ public class AuthController : ControllerBase
                     UserId = user.Id
                 };
 
-                await this._dbContext.UsersTokens.AddAsync(userTokens);
+                await this._dbContext.AddAsync(userTokens);
+                await this._dbContext.SaveChangesAsync();
             }
 
-            await this._dbContext.SaveChangesAsync();
 
             var hasSecretFile = await this._googleDriveService.GetSecretFile(user) is not null;
 
@@ -234,10 +234,10 @@ public class AuthController : ControllerBase
     [HttpPost("signOut/google")]
     public async Task<IActionResult> SignOutGoogle([FromBody] GoogleSignOutRequest request)
     {
-        var user = await this._dbContext.Users
+        var user = await this._dbContext.Users.AsTracking()
             .Include(user => user.UserTokens)
             .FirstOrDefaultAsync(u => u.Email == User.FindFirst(ClaimTypes.Email)!.Value);
-        
+
         if (user is null)
         {
             return NotFound();
@@ -245,25 +245,24 @@ public class AuthController : ControllerBase
 
         try
         {
-            if (user.UserTokens is null)
-            {
-                return Ok();
-            }
-
-            if (!request.KeepData)
-            {
-                if (this._googleDriveService.IsTokenExpired(user))
-                {
-                    await this._googleDriveService.UpdateTokens(user);
-                }
-
-                await this._googleDriveService.DeleteSecretFile(user);
-            }
-
-            this._dbContext.UsersTokens.Remove(user.UserTokens);
-            await this._dbContext.SaveChangesAsync();
-
+        if (user.UserTokens is null)
+        {
             return Ok();
+        }
+
+        if (!request.KeepData)
+        {
+            if (this._googleDriveService.IsTokenExpired(user))
+            {
+                await this._googleDriveService.UpdateTokens(user);
+            }
+
+            await this._googleDriveService.DeleteSecretFile(user);
+        }
+
+        await this._dbContext.SaveChangesAsync();
+        await this._dbContext.UsersTokens.Where(u => u.Id == user.UserTokens.Id).ExecuteDeleteAsync();
+        return Ok();
         }
         catch (Exception ex)
         {
@@ -288,7 +287,8 @@ public class AuthController : ControllerBase
             await this._googleDriveService.UpdateTokens(user);
         }
 
-        var decryptedAccessToken = AesEncryption.Decrypt(user.UserTokens.AccessToken, this._aesSecretKey, this._aesIv);
+        var decryptedAccessToken =
+            AesEncryption.Decrypt(user.UserTokens.AccessToken, this._aesSecretKey, this._aesIv);
         var credential = GoogleCredential.FromAccessToken(decryptedAccessToken);
 
         var userInfoService = new Oauth2Service(new BaseClientService.Initializer
@@ -306,7 +306,7 @@ public class AuthController : ControllerBase
     [HttpGet("ping")]
     public async Task<IActionResult> Ping()
     {
-        var user = await this._dbContext.Users
+        var user = await this._dbContext.Users.AsNoTrackingWithIdentityResolution()
             .Include(user => user.UserSettings)
             .FirstOrDefaultAsync(u => u.Email == User.FindFirst(ClaimTypes.Email)!.Value);
 
