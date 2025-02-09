@@ -100,7 +100,7 @@ public class MfaController : ControllerBase
 
     private Task<User?> GetUser()
     {
-        return this._dbContext.Users
+        return this._dbContext.Users.AsNoTracking()
             .FirstOrDefaultAsync(u => u.Email == User.FindFirst(ClaimTypes.Email)!.Value);
     }
 }

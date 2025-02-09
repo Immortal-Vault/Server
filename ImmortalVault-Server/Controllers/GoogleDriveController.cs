@@ -20,7 +20,7 @@ public class GoogleDriveController : ControllerBase
         this._googleDriveService = googleDriveService;
         this._dbContext = dbContext;
     }
-    
+
     [Authorize]
     [HttpPost]
     public async Task<IActionResult> UploadSecretFile([FromBody] GoogleDriveUploadRequest request)
@@ -37,16 +37,16 @@ public class GoogleDriveController : ControllerBase
         {
             await this._googleDriveService.UpdateTokens(user);
         }
-        
+
         var resultInfo = await this._googleDriveService.UploadOrReplaceSecretFile(user, request.Content, request.Hash);
         if (resultInfo is { Result: false, Conflict: true })
         {
             return Conflict(resultInfo.Hash);
         }
-        
+
         return Ok(resultInfo.Hash);
     }
-    
+
     [Authorize]
     [HttpGet]
     public async Task<IActionResult> GetSecretFile()
@@ -54,6 +54,7 @@ public class GoogleDriveController : ControllerBase
         var user = await this._dbContext.Users
             .Include(user => user.UserTokens)
             .FirstOrDefaultAsync(u => u.Email == User.FindFirst(ClaimTypes.Email)!.Value);
+
         if (user is null)
         {
             return NotFound("ACCOUNT_NOT_FOUND");
@@ -69,7 +70,7 @@ public class GoogleDriveController : ControllerBase
         {
             return NotFound("SECRET_NOT_FOUND");
         }
-        
+
         return Ok(new { fileContent.Value.Content, fileContent.Value.Hash });
     }
 }
