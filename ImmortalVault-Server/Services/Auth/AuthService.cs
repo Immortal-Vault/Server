@@ -7,34 +7,33 @@ namespace ImmortalVault_Server.Services.Auth;
 
 public interface IAuthService
 {
-    string GenerateAccessToken(string email, string audience);
+    string GenerateAccessToken(string email, string audience, int expirationMinutes);
 }
 
 public class AuthService : IAuthService
 {
     private readonly IConfiguration _configuration;
-    public static readonly int TokenLifetimeMinutes = 10;
-    public static readonly int TokenRefreshThresholdInMinutes = 5;
 
     public AuthService(IConfiguration configuration)
     {
         this._configuration = configuration;
     }
-    
-    public string GenerateAccessToken(string email, string audience)
+
+    public string GenerateAccessToken(string email, string audience, int expirationMinutes)
     {
         var claims = new List<Claim>
         {
             new(ClaimTypes.Email, email),
         };
 
-        var secretKey = this._configuration[$"JWT:{audience}:SECRET_KEY"] ?? throw new Exception("Secret key not configured");
+        var secretKey = this._configuration[$"JWT:{audience}:SECRET_KEY"] ??
+                        throw new Exception("Secret key not configured");
 
         var token = new JwtSecurityToken(
             issuer: this._configuration["JWT:ISSUER"],
             audience: this._configuration[$"JWT:{audience}:AUDIENCE"],
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(TokenLifetimeMinutes),
+            expires: DateTime.UtcNow.AddMinutes(expirationMinutes),
             signingCredentials: new SigningCredentials(
                 new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
                 SecurityAlgorithms.HmacSha256)
