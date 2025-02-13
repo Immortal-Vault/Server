@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using ImmortalVault_Server.Models;
+using ImmortalVault_Server.Services.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -15,11 +17,13 @@ public record ChangeInactiveModel(int InactiveMinutes);
 [Route("api/user")]
 public class UserController : ControllerBase
 {
+    private readonly IAuthService _authService;
     private readonly ApplicationDbContext _dbContext;
 
-    public UserController(ApplicationDbContext dbContext)
+    public UserController(ApplicationDbContext dbContext, IAuthService authService)
     {
         this._dbContext = dbContext;
+        this._authService = authService;
     }
 
     [Authorize]
@@ -111,11 +115,22 @@ public class UserController : ControllerBase
 
         try
         {
+            var token = this._authService.GenerateAccessToken(user.Email, Audience.ImmortalVaultClient,
+                user.UserSettings.InactiveMinutes);
+            Response.Cookies.Append("immortalVaultJwtToken", token, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.None,
+                Expires = DateTimeOffset.UtcNow.AddMinutes(user.UserSettings.InactiveMinutes)
+            });
+
             await this._dbContext.UsersSettings.AsNoTrackingWithIdentityResolution()
                 .Where(us => us.Id == user.UserSettings.Id)
                 .ExecuteUpdateAsync(us => us
                     .SetProperty(u => u.InactiveMinutes, model.InactiveMinutes)
                 );
+
 
             return Ok();
         }
