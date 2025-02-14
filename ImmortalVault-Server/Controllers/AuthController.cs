@@ -124,20 +124,22 @@ public class AuthController : ControllerBase
             }
         }
 
-        var token = this._authService.GenerateAccessToken(user.Email, Audience.ImmortalVaultClient);
+        var token = this._authService.GenerateAccessToken(user.Email, Audience.ImmortalVaultClient,
+            user.UserSettings.InactiveMinutes);
         Response.Cookies.Append("immortalVaultJwtToken", token, new CookieOptions
         {
             HttpOnly = true,
             Secure = true,
             SameSite = SameSiteMode.None,
-            Expires = DateTimeOffset.UtcNow.AddMinutes(AuthService.TokenLifetimeMinutes)
+            Expires = DateTimeOffset.UtcNow.AddMinutes(user.UserSettings.InactiveMinutes)
         });
 
         var localization = user.UserSettings.Language;
         var is12Hours = user.UserSettings.Is12HoursFormat;
         var username = user.Name;
+        var inactiveMinutes = user.UserSettings.InactiveMinutes;
 
-        return Ok(new { localization, is12Hours, username });
+        return Ok(new { localization, is12Hours, username, inactiveMinutes });
     }
 
     [Authorize]
@@ -245,24 +247,24 @@ public class AuthController : ControllerBase
 
         try
         {
-        if (user.UserTokens is null)
-        {
-            return Ok();
-        }
-
-        if (!request.KeepData)
-        {
-            if (this._googleDriveService.IsTokenExpired(user))
+            if (user.UserTokens is null)
             {
-                await this._googleDriveService.UpdateTokens(user);
+                return Ok();
             }
 
-            await this._googleDriveService.DeleteSecretFile(user);
-        }
+            if (!request.KeepData)
+            {
+                if (this._googleDriveService.IsTokenExpired(user))
+                {
+                    await this._googleDriveService.UpdateTokens(user);
+                }
 
-        await this._dbContext.SaveChangesAsync();
-        await this._dbContext.UsersTokens.Where(u => u.Id == user.UserTokens.Id).ExecuteDeleteAsync();
-        return Ok();
+                await this._googleDriveService.DeleteSecretFile(user);
+            }
+
+            await this._dbContext.SaveChangesAsync();
+            await this._dbContext.UsersTokens.Where(u => u.Id == user.UserTokens.Id).ExecuteDeleteAsync();
+            return Ok();
         }
         catch (Exception ex)
         {
