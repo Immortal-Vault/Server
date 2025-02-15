@@ -116,13 +116,13 @@ public class UserController : ControllerBase
         try
         {
             var token = this._authService.GenerateAccessToken(user.Email, Audience.ImmortalVaultClient,
-                user.UserSettings.InactiveMinutes);
+                model.InactiveMinutes);
             Response.Cookies.Append("immortalVaultJwtToken", token, new CookieOptions
             {
                 HttpOnly = true,
                 Secure = true,
                 SameSite = SameSiteMode.None,
-                Expires = DateTimeOffset.UtcNow.AddMinutes(user.UserSettings.InactiveMinutes)
+                Expires = DateTimeOffset.UtcNow.AddMinutes(model.InactiveMinutes)
             });
 
             await this._dbContext.UsersSettings.AsNoTrackingWithIdentityResolution()
