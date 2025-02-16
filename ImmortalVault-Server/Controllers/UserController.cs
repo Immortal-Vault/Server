@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using ImmortalVault_Server.Models;
 using ImmortalVault_Server.Services.Auth;
+using Isopoh.Cryptography.Argon2;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,17 +14,21 @@ public record ChangeTimeFormatModel(bool Is12HoursFormat);
 
 public record ChangeInactiveModel(int InactiveMinutes);
 
+public record ChangePasswordModel(string OldPassword, string NewPassword, string? TotpCode);
+
 [ApiController]
 [Route("api/user")]
 public class UserController : ControllerBase
 {
     private readonly IAuthService _authService;
     private readonly ApplicationDbContext _dbContext;
+    private readonly IMfaService _mfaService;
 
-    public UserController(ApplicationDbContext dbContext, IAuthService authService)
+    public UserController(ApplicationDbContext dbContext, IAuthService authService, IMfaService mfaService)
     {
         this._dbContext = dbContext;
         this._authService = authService;
+        this._mfaService = mfaService;
     }
 
     [Authorize]
@@ -139,5 +144,49 @@ public class UserController : ControllerBase
             Console.Error.WriteLine(e);
             return StatusCode(500, "An error occurred while updating the user's inactive minutes.");
         }
+    }
+
+    [Authorize]
+    [HttpPost("changePassword")]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordModel model)
+    {
+        var email = User.FindFirst(ClaimTypes.Email)!.Value;
+
+        var user = await this._dbContext.Users.AsNoTrackingWithIdentityResolution()
+            .Include(u => u.UserSettings)
+            .Where(u => u.Email == email)
+            .FirstOrDefaultAsync();
+
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        if (user.MfaEnabled)
+        {
+            if (string.IsNullOrEmpty(model.TotpCode))
+            {
+                return BadRequest("MFA");
+            }
+
+            if (!await this._mfaService.UseUserMfa(user, model.TotpCode))
+            {
+                return BadRequest("INVALID_TOTP");
+            }
+        }
+
+        if (!Argon2.Verify(user.Password, model.OldPassword))
+        {
+            return BadRequest("INVALID_PASSWORD");
+        }
+
+        var result = await this._authService.ChangePassword(user, model.NewPassword);
+
+        if (!result)
+        {
+            return BadRequest("SAME_PASSWORD");
+        }
+
+        return Ok(result);
     }
 }
