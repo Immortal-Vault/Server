@@ -113,7 +113,7 @@ public class AuthController : ControllerBase
 
         if (user.MfaEnabled)
         {
-            if (model.MfaCode is null)
+            if (string.IsNullOrEmpty(model.MfaCode))
             {
                 return BadRequest("MFA");
             }
